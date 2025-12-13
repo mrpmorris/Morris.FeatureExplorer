@@ -1,0 +1,44 @@
+﻿<UserControl
+    x:Class="Morris.FeatureExplorer.Features.FeatureExplorer.FeatureExplorerToolWindowControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:Morris.FeatureExplorer.Features.FeatureExplorer"
+    xmlns:vsfx="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
+    x:Name="Root">
+
+    <UserControl.Resources>
+        <local:NodeToIconConverter x:Key="NodeToIconConverter" />
+    </UserControl.Resources>
+
+    <Grid Background="{DynamicResource {x:Static vsfx:VsBrushes.ToolWindowBackgroundKey}}">
+        <TreeView ItemsSource="{Binding RootNodes}"
+                  Background="{DynamicResource {x:Static vsfx:VsBrushes.ToolWindowBackgroundKey}}"
+                  BorderBrush="{DynamicResource {x:Static vsfx:VsBrushes.ToolWindowBorderKey}}"
+                  Foreground="{DynamicResource {x:Static vsfx:VsBrushes.ToolWindowTextKey}}">
+
+            <!-- Sync TreeViewItem.IsExpanded with NodeBase.IsExpanded so icons update correctly -->
+            <TreeView.ItemContainerStyle>
+                <Style TargetType="TreeViewItem">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </Style>
+            </TreeView.ItemContainerStyle>
+
+            <TreeView.ItemTemplate>
+                <HierarchicalDataTemplate ItemsSource="{Binding ChildNodes}">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Width="16" Height="16" Margin="0,0,4,0">
+                            <Image.Source>
+                                <MultiBinding Converter="{StaticResource NodeToIconConverter}">
+                                    <Binding />
+                                    <Binding Path="IsExpanded" />
+                                </MultiBinding>
+                            </Image.Source>
+                        </Image>
+                        <TextBlock Text="{Binding Name}"
+                                   Foreground="{DynamicResource {x:Static vsfx:VsBrushes.ToolWindowTextKey}}" />
+                    </StackPanel>
+                </HierarchicalDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+    </Grid>
+</UserControl>
