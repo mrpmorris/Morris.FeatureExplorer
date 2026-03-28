@@ -6,7 +6,7 @@
 	<Commands package="guidFeatureExplorerPackage">
 		<Buttons>
 			<Button guid="guidFeatureExplorerPackageCmdSet" id="ShowFeatureExplorerCommandId" priority="0x0001" type="Button">
-				<Parent guid="guidSHLMainMenu" id="IDG_VS_VIEW_ORG_WINDOWS" />
+				<Parent guid="guidSHLMainMenu" id="IDG_VS_VIEW_DEV_WINDOWS" />
 				<Strings>
 					<ButtonText>Feature Explorer</ButtonText>
 				</Strings>
