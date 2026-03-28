@@ -1,52 +1,23 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<Extern href="stdidcmd.h" />
+	<Extern href="vsshlids.h" />
 
-  <!-- Shell-defined command & menu IDs -->
-  <Extern href="stdidcmd.h"/>
-  <Extern href="vsshlids.h"/>
+	<Commands package="guidFeatureExplorerPackage">
+		<Buttons>
+			<Button guid="guidFeatureExplorerPackageCmdSet" id="ShowFeatureExplorerCommandId" priority="0x0001" type="Button">
+				<Parent guid="guidSHLMainMenu" id="IDG_VS_VIEW_ORG_WINDOWS" />
+				<Strings>
+					<ButtonText>Feature Explorer</ButtonText>
+				</Strings>
+			</Button>
+		</Buttons>
+	</Commands>
 
-  <Commands package="guidFeatureExplorerPackage">
-
-    <!-- Buttons: put our command in the View > Windows group -->
-    <Buttons>
-      <Button guid="guidFeatureExplorerPackageCmdSet"
-              id="ShowFeatureExplorerCommandId"
-              priority="0x0001"
-              type="Button">
-        <!-- Parent to the built-in Windows group on the View menu -->
-        <Parent guid="guidSHLMainMenu" id="IDG_VS_VIEW_WINDOWS" />
-        <Icon guid="guidImages" id="bmpPic1" />
-        <Strings>
-          <ButtonText>Feature Explorer</ButtonText>
-        </Strings>
-      </Button>
-    </Buttons>
-
-    <!-- Optional icon (keep or remove as you like) -->
-    <Bitmaps>
-      <Bitmap guid="guidImages"
-              href="Resources\ShowFeatureExplorerCommand.png"
-              usedList="bmpPic1, bmpPic2, bmpPicSearch, bmpPicX, bmpPicArrows, bmpPicStrikethrough"/>
-    </Bitmaps>
-  </Commands>
-
-  <Symbols>
-    <!-- Package GUID -->
-    <GuidSymbol name="guidFeatureExplorerPackage" value="{6a8e784c-96b4-4717-a560-99d2cbd83242}" />
-
-    <!-- Our command set -->
-    <GuidSymbol name="guidFeatureExplorerPackageCmdSet" value="{5ab1055c-0f02-4797-afa4-d5fcc04edde2}">
-      <IDSymbol name="ShowFeatureExplorerCommandId" value="0x0100" />
-    </GuidSymbol>
-
-    <!-- Icon GUID -->
-    <GuidSymbol name="guidImages" value="{5162f40c-7991-42ad-bae6-44332ded3603}">
-      <IDSymbol name="bmpPic1" value="1" />
-      <IDSymbol name="bmpPic2" value="2" />
-      <IDSymbol name="bmpPicSearch" value="3" />
-      <IDSymbol name="bmpPicX" value="4" />
-      <IDSymbol name="bmpPicArrows" value="5" />
-      <IDSymbol name="bmpPicStrikethrough" value="6" />
-    </GuidSymbol>
-  </Symbols>
+	<Symbols>
+		<GuidSymbol name="guidFeatureExplorerPackage" value="{d8c9b0a1-5e7f-4b2d-9a3c-1f6e8d4b7c2a}" />
+		<GuidSymbol name="guidFeatureExplorerPackageCmdSet" value="{e9d0c1b2-6f80-4c3e-ab4d-207f9e5c8d3b}">
+			<IDSymbol name="ShowFeatureExplorerCommandId" value="0x0100" />
+		</GuidSymbol>
+	</Symbols>
 </CommandTable>
