@@ -1,17 +1,32 @@
 <UserControl x:Class="Morris.FeatureExplorer.FeatureExplorerToolWindowControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:models="clr-namespace:Morris.FeatureExplorer.Models">
+             xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
+             xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
+             xmlns:platformUI="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+             xmlns:local="clr-namespace:Morris.FeatureExplorer"
+             xmlns:models="clr-namespace:Morris.FeatureExplorer.Models"
+             Background="{DynamicResource {x:Static platformUI:EnvironmentColors.ToolWindowBackgroundBrushKey}}">
     <UserControl.Resources>
+        <local:FileIconConverter x:Key="FileIconConverter" />
+        <Style TargetType="TreeViewItem">
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static platformUI:EnvironmentColors.ToolWindowTextBrushKey}}" />
+        </Style>
         <HierarchicalDataTemplate DataType="{x:Type models:FolderNode}"
                                   ItemsSource="{Binding Children}">
-            <TextBlock Text="{Binding Name}" />
+            <StackPanel Orientation="Horizontal">
+                <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.FolderClosed}" Margin="0,0,4,0" />
+                <TextBlock Text="{Binding Name}" />
+            </StackPanel>
         </HierarchicalDataTemplate>
         <DataTemplate DataType="{x:Type models:FileNode}">
-            <TextBlock Text="{Binding Name}" />
+            <StackPanel Orientation="Horizontal">
+                <imaging:CrispImage Width="16" Height="16" Moniker="{Binding Name, Converter={StaticResource FileIconConverter}}" Margin="0,0,4,0" />
+                <TextBlock Text="{Binding Name}" />
+            </StackPanel>
         </DataTemplate>
     </UserControl.Resources>
     <TreeView ItemsSource="{Binding RootNodes}"
-
+              Background="Transparent"
               BorderThickness="0" />
 </UserControl>

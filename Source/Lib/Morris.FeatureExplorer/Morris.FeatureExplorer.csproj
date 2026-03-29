@@ -53,6 +53,7 @@
     <Compile Include="Consts.cs" />
     <Compile Include="FeatureExplorerPackage.cs" />
     <Compile Include="FeatureExplorerToolWindow.cs" />
+    <Compile Include="FileIconConverter.cs" />
     <Compile Include="FeatureExplorerToolWindowControl.xaml.cs">
       <DependentUpon>FeatureExplorerToolWindowControl.xaml</DependentUpon>
     </Compile>
