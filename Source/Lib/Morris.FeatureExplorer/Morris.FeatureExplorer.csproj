@@ -48,12 +48,37 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="CompositeDisposable.cs" />
+    <Compile Include="Consts.cs" />
+    <Compile Include="Extensions\AsyncPackageGetServiceExtension.cs" />
+    <Compile Include="Extensions\EntityIdentityGetFolderPathExtension.cs" />
+    <Compile Include="Extensions\EntityIdentityGetProjectPathExtension.cs" />
+    <Compile Include="Extensions\EntityIdentityGetSourceItemNameExtension.cs" />
+    <Compile Include="Extensions\IAsyncQueryableIFileSnapshotDefaultPropertiesExtension.cs" />
+    <Compile Include="Extensions\IAsyncQueryableIFolderSnapshotDefaultPropertiesExtension.cs" />
+    <Compile Include="Extensions\IAsyncQueryableIProjectSnapshotDefaultPropertiesExtension.cs" />
+    <Compile Include="Extensions\IEnumerableIProjectItemUpdateCombineFolderRemoveAndAddToChangeExtension.cs" />
+    <Compile Include="Extensions\IEnumerableIProjectItemUpdateSortByProcessingOrderExtension.cs" />
+    <Compile Include="Extensions\IEnumerableItemUpdateToProjectItemUpdatesExtension.cs" />
+    <Compile Include="Extensions\IProjectItemUpdateGetFullPathExtension.cs" />
     <Compile Include="FeatureExplorerPackage.cs" />
     <Compile Include="Features\FeatureExplorer\FeatureExplorerToolWindow.cs" />
     <Compile Include="Features\FeatureExplorer\FeatureExplorerToolWindowControl.xaml.cs">
       <DependentUpon>FeatureExplorerToolWindowControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\FeatureExplorer\FeatureExplorerViewModel.cs" />
+    <Compile Include="Features\FeatureExplorer\IProjectItemUpdate.cs" />
+    <Compile Include="Features\FeatureExplorer\Models\FileNode.cs" />
+    <Compile Include="Features\FeatureExplorer\Models\FolderNode.cs" />
+    <Compile Include="Features\FeatureExplorer\Models\NodeBase.cs" />
+    <Compile Include="Features\FeatureExplorer\Models\NodeBaseComparer.cs" />
+    <Compile Include="Features\FeatureExplorer\Models\ProjectInfo.cs" />
+    <Compile Include="Features\FeatureExplorer\NodeToIconConverter.cs" />
+    <Compile Include="Features\FeatureExplorer\ProjectItemsEventsObserver.cs" />
+    <Compile Include="Features\FeatureExplorer\SolutionProjectEventsObserver.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ShowFeatureExplorerCommand.cs" />
+    <Compile Include="SortedObservableCollection.cs" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="Features\FeatureExplorer\FeatureExplorerToolWindowControl.xaml">

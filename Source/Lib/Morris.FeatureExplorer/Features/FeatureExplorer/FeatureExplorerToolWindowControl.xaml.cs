@@ -7,5 +7,6 @@ public partial class FeatureExplorerToolWindowControl : UserControl
 	public FeatureExplorerToolWindowControl()
 	{
 		InitializeComponent();
+		DataContext = FeatureExplorerViewModel.Instance;
 	}
 }
