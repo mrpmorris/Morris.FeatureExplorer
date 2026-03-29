@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -146,33 +147,145 @@ namespace Morris.FeatureExplorer
 				return;
 			}
 
-			// Only the leaf name changed and node has a single source — rename in-place
-			if (oldSegments.Length == newSegments.Length
-				&& SegmentPrefixEquals(oldSegments, newSegments, oldSegments.Length - 1))
+			if (!isFolder)
 			{
-				FolderNode parent = FindFolderPath(oldSegments, 0, oldSegments.Length - 1);
-				if (parent != null)
-				{
-					string oldLeaf = oldSegments[oldSegments.Length - 1];
-					NodeBase target = isFolder
-						? (NodeBase)parent.Children.OfType<FolderNode>()
-							.FirstOrDefault(f => StringComparer.OrdinalIgnoreCase.Equals(f.Name, oldLeaf))
-						: parent.Children.OfType<FileNode>()
-							.FirstOrDefault(f => StringComparer.OrdinalIgnoreCase.Equals(f.Name, oldLeaf));
-
-					if (target != null && target.SourcePaths.Count == 1)
-					{
-						target.SourcePaths.Remove(oldPath);
-						target.SourcePaths.Add(newPath);
-						target.Name = newSegments[newSegments.Length - 1];
-						parent.Children.Reposition(target);
-						return;
-					}
-				}
+				RemoveItem(oldPath, isFolder: false);
+				AddItem(newPath, isFolder: false);
+				return;
 			}
 
-			RemoveItem(oldPath, isFolder);
-			AddItem(newPath, isFolder);
+			RenameFolderIncremental(oldPath, newPath, oldSegments, newSegments);
+		}
+
+		private void RenameFolderIncremental(string oldPath, string newPath, string[] oldSegments, string[] newSegments)
+		{
+			FolderNode oldParent = FindFolderPath(oldSegments, 0, oldSegments.Length - 1);
+			if (oldParent == null)
+				return;
+
+			string oldLeaf = oldSegments[oldSegments.Length - 1];
+			FolderNode sourceNode = oldParent.Children
+				.OfType<FolderNode>()
+				.FirstOrDefault(f => StringComparer.OrdinalIgnoreCase.Equals(f.Name, oldLeaf));
+
+			if (sourceNode == null)
+				return;
+
+			// Step 1: Find or create target folder
+			FolderNode newParent = EnsureFolderPath(newSegments, 0, newSegments.Length - 1, newPath);
+			string newLeaf = newSegments[newSegments.Length - 1];
+			FolderNode targetNode = newParent.Children
+				.OfType<FolderNode>()
+				.FirstOrDefault(f => StringComparer.OrdinalIgnoreCase.Equals(f.Name, newLeaf));
+
+			if (targetNode == null)
+			{
+				targetNode = new FolderNode(newLeaf);
+				newParent.Children.AddSorted(targetNode);
+				SyncRootNodes(newParent);
+			}
+
+			// Step 2 & 3: Move children belonging to this project (matching oldPath prefix)
+			targetNode.SourcePaths.Add(newPath);
+			MoveMatchingChildren(sourceNode, targetNode, oldPath, newPath);
+
+			// Step 4: Remove oldPath from source, remove source if empty
+			sourceNode.SourcePaths.Remove(oldPath);
+			if (sourceNode.SourcePaths.Count == 0 && sourceNode.Children.Count == 0)
+			{
+				oldParent.Children.Remove(sourceNode);
+				SyncRootNodes(oldParent);
+			}
+		}
+
+		private static void MoveMatchingChildren(FolderNode source, FolderNode target, string oldPathPrefix, string newPathPrefix)
+		{
+			for (int i = source.Children.Count - 1; i >= 0; i--)
+			{
+				NodeBase child = source.Children[i];
+
+				// Find source paths belonging to the renamed project
+				var matchingPaths = child.SourcePaths
+					.Where(p => p.StartsWith(oldPathPrefix, StringComparison.OrdinalIgnoreCase))
+					.ToList();
+
+				if (matchingPaths.Count == 0)
+					continue;
+
+				// Compute new paths
+				var newPaths = matchingPaths
+					.Select(p => newPathPrefix + p.Substring(oldPathPrefix.Length))
+					.ToList();
+
+				// Remove old paths from source child
+				foreach (string path in matchingPaths)
+					child.SourcePaths.Remove(path);
+
+				if (child is FolderNode childFolder)
+				{
+					// Find or create matching folder in target
+					FolderNode targetChild = target.Children
+						.OfType<FolderNode>()
+						.FirstOrDefault(f => StringComparer.OrdinalIgnoreCase.Equals(f.Name, child.Name));
+
+					if (targetChild == null)
+					{
+						if (child.SourcePaths.Count == 0)
+						{
+							// No other projects reference this folder — move the whole node
+							source.Children.RemoveAt(i);
+							foreach (string path in newPaths)
+								child.SourcePaths.Add(path);
+							UpdateDescendantSourcePaths(childFolder, oldPathPrefix, newPathPrefix);
+							target.Children.AddSorted(child);
+							continue;
+						}
+
+						targetChild = new FolderNode(child.Name);
+						target.Children.AddSorted(targetChild);
+					}
+
+					foreach (string path in newPaths)
+						targetChild.SourcePaths.Add(path);
+
+					// Recurse into subfolder
+					MoveMatchingChildren(childFolder, targetChild, oldPathPrefix, newPathPrefix);
+
+					// Remove source folder if empty
+					if (child.SourcePaths.Count == 0 && childFolder.Children.Count == 0)
+						source.Children.RemoveAt(i);
+				}
+				else
+				{
+					// File node
+					FileNode targetChild = target.Children
+						.OfType<FileNode>()
+						.FirstOrDefault(f => StringComparer.OrdinalIgnoreCase.Equals(f.Name, child.Name));
+
+					if (targetChild == null)
+					{
+						if (child.SourcePaths.Count == 0)
+						{
+							// No other projects reference this file — move the whole node
+							source.Children.RemoveAt(i);
+							foreach (string path in newPaths)
+								child.SourcePaths.Add(path);
+							target.Children.AddSorted(child);
+							continue;
+						}
+
+						targetChild = new FileNode(child.Name);
+						target.Children.AddSorted(targetChild);
+					}
+
+					foreach (string path in newPaths)
+						targetChild.SourcePaths.Add(path);
+
+					// Remove source file if empty
+					if (child.SourcePaths.Count == 0)
+						source.Children.RemoveAt(i);
+				}
+			}
 		}
 
 		private FolderNode EnsureFolderPath(string[] segments, int start, int endExclusive, string sourcePath)
@@ -242,6 +355,27 @@ namespace Morris.FeatureExplorer
 				{
 					break;
 				}
+			}
+		}
+
+		private static void UpdateDescendantSourcePaths(FolderNode folder, string oldPrefix, string newPrefix)
+		{
+			foreach (NodeBase child in folder.Children)
+			{
+				var updated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+				foreach (string path in child.SourcePaths)
+				{
+					if (path.StartsWith(oldPrefix, StringComparison.OrdinalIgnoreCase))
+						updated.Add(newPrefix + path.Substring(oldPrefix.Length));
+					else
+						updated.Add(path);
+				}
+				child.SourcePaths.Clear();
+				foreach (string path in updated)
+					child.SourcePaths.Add(path);
+
+				if (child is FolderNode childFolder)
+					UpdateDescendantSourcePaths(childFolder, oldPrefix, newPrefix);
 			}
 		}
 
