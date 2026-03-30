@@ -1,8 +1,10 @@
+using PropertyChanged;
 using System;
 using System.Collections.Generic;
 
 namespace Morris.FeatureExplorer.Models
 {
+	[AddINotifyPropertyChangedInterface]
 	public abstract class NodeBase
 	{
 		public string Name { get; set; }
