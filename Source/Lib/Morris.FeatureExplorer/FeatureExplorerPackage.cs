@@ -16,10 +16,22 @@ namespace Morris.FeatureExplorer
 	[ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExistsAndFullyLoaded_string, PackageAutoLoadFlags.BackgroundLoad)]
 	public sealed class FeatureExplorerPackage : AsyncPackage
 	{
-		private SolutionEventsListener _solutionListener;
-		private ProjectDocumentsListener _documentsListener;
-
 		internal static FeatureExplorerViewModel ViewModel { get; private set; }
+
+		private SolutionEventsListener SolutionListener;
+		private ProjectDocumentsListener DocumentsListener;
+
+		protected override void Dispose(bool disposing)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			if (disposing)
+			{
+				DocumentsListener?.Dispose();
+				SolutionListener?.Dispose();
+				ViewModel?.ClearDte();
+			}
+			base.Dispose(disposing);
+		}
 
 		protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
 		{
@@ -35,25 +47,13 @@ namespace Morris.FeatureExplorer
 
 			var solution = await GetServiceAsync(typeof(SVsSolution)) as IVsSolution;
 			if (solution != null)
-				_solutionListener = new SolutionEventsListener(solution, ViewModel);
+				SolutionListener = new SolutionEventsListener(solution, ViewModel);
 
 			var tracker = await GetServiceAsync(typeof(SVsTrackProjectDocuments)) as IVsTrackProjectDocuments2;
 			if (tracker != null)
-				_documentsListener = new ProjectDocumentsListener(tracker, ViewModel);
+				DocumentsListener = new ProjectDocumentsListener(tracker, ViewModel);
 
 			await ShowFeatureExplorerCommand.InitializeAsync(this);
-		}
-
-		protected override void Dispose(bool disposing)
-		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-			if (disposing)
-			{
-				_documentsListener?.Dispose();
-				_solutionListener?.Dispose();
-				ViewModel?.ClearDte();
-			}
-			base.Dispose(disposing);
 		}
 	}
 }

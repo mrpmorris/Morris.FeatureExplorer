@@ -5,11 +5,11 @@ namespace Morris.FeatureExplorer
 {
 	public class SortedObservableCollection<T> : ObservableCollection<T>
 	{
-		private readonly IComparer<T> _comparer;
+		private readonly IComparer<T> Comparer;
 
 		public SortedObservableCollection(IComparer<T> comparer)
 		{
-			_comparer = comparer;
+			Comparer = comparer;
 		}
 
 		public void AddSorted(T item)
@@ -36,7 +36,7 @@ namespace Morris.FeatureExplorer
 			while (low <= high)
 			{
 				int mid = low + (high - low) / 2;
-				int comparison = _comparer.Compare(Items[mid], item);
+				int comparison = Comparer.Compare(Items[mid], item);
 
 				if (comparison <= 0)
 					low = mid + 1;

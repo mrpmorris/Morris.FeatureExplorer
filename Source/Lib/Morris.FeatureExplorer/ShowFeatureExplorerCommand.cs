@@ -8,11 +8,11 @@ namespace Morris.FeatureExplorer
 {
 	internal sealed class ShowFeatureExplorerCommand
 	{
-		private readonly FeatureExplorerPackage _package;
+		private readonly FeatureExplorerPackage Package;
 
 		private ShowFeatureExplorerCommand(FeatureExplorerPackage package, OleMenuCommandService commandService)
 		{
-			_package = package;
+			Package = package;
 
 			var commandId = new CommandID(Consts.CommandSetGuid, Consts.FeatureExplorerCommandId);
 			var menuCommand = new MenuCommand(Execute, commandId);
@@ -37,11 +37,11 @@ namespace Morris.FeatureExplorer
 
 		private async Task ExecuteAsync()
 		{
-			ToolWindowPane window = await _package.ShowToolWindowAsync(
+			ToolWindowPane window = await Package.ShowToolWindowAsync(
 				typeof(FeatureExplorerToolWindow),
 				0,
 				create: true,
-				_package.DisposalToken);
+				Package.DisposalToken);
 
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
