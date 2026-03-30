@@ -5,7 +5,10 @@ using System.IO;
 using System.Linq;
 using EnvDTE;
 using EnvDTE80;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
+using DteConstants = EnvDTE.Constants;
 using Morris.FeatureExplorer.Models;
 
 namespace Morris.FeatureExplorer
@@ -150,6 +153,61 @@ namespace Morris.FeatureExplorer
 			RenameFolderIncremental(oldPath, newPath, oldSegments, newSegments);
 		}
 
+		public void SelectInSolutionExplorer(FileNode node)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			if (Dte == null || node.SourcePaths.Count == 0)
+				return;
+
+			string path = node.SourcePaths.First();
+
+			try
+			{
+				ProjectItem projectItem = Dte.Solution.FindProjectItem(path);
+				if (projectItem == null)
+					return;
+
+				var serviceProvider = (Microsoft.VisualStudio.OLE.Interop.IServiceProvider)Dte;
+
+				var solution = (IVsSolution)GetService(serviceProvider, typeof(SVsSolution), typeof(IVsSolution));
+				if (solution == null)
+					return;
+
+				if (!ErrorHandler.Succeeded(solution.GetProjectOfUniqueName(projectItem.ContainingProject.UniqueName, out IVsHierarchy hierarchy))
+					|| hierarchy == null)
+					return;
+
+				string fullPath = projectItem.get_FileNames(1);
+				if (!(hierarchy is IVsProject vsProject)
+					|| !ErrorHandler.Succeeded(vsProject.IsDocumentInProject(fullPath, out int found, new VSDOCUMENTPRIORITY[1], out uint itemId))
+					|| found == 0)
+					return;
+
+				var shell = (IVsUIShell)GetService(serviceProvider, typeof(SVsUIShell), typeof(IVsUIShell));
+				if (shell == null)
+					return;
+
+				Guid solutionExplorerGuid = new Guid(ToolWindowGuids.SolutionExplorer);
+				if (!ErrorHandler.Succeeded(shell.FindToolWindow((uint)__VSFINDTOOLWIN.FTW_fForceCreate, ref solutionExplorerGuid, out IVsWindowFrame seFrame))
+					|| seFrame == null)
+					return;
+
+				if (ErrorHandler.Succeeded(seFrame.GetProperty((int)__VSFPROPID.VSFPROPID_DocView, out object docView))
+					&& docView is IVsUIHierarchyWindow hierarchyWindow)
+				{
+					hierarchyWindow.ExpandItem(hierarchy as IVsUIHierarchy, itemId, EXPANDFLAGS.EXPF_SelectItem);
+				}
+
+				// Briefly show SE so it pushes selection to Properties, then reactivate FE
+				seFrame.ShowNoActivate();
+			}
+			catch
+			{
+				// Item may not be accessible
+			}
+		}
+
 		public void SetDte(DTE2 dte)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -228,6 +286,25 @@ namespace Morris.FeatureExplorer
 			return current;
 		}
 
+		private static object GetService(Microsoft.VisualStudio.OLE.Interop.IServiceProvider serviceProvider, Type serviceType, Type interfaceType)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			Guid serviceGuid = serviceType.GUID;
+			Guid interfaceGuid = interfaceType.GUID;
+			if (ErrorHandler.Succeeded(serviceProvider.QueryService(ref serviceGuid, ref interfaceGuid, out IntPtr obj)) && obj != IntPtr.Zero)
+			{
+				try
+				{
+					return System.Runtime.InteropServices.Marshal.GetObjectForIUnknown(obj);
+				}
+				finally
+				{
+					System.Runtime.InteropServices.Marshal.Release(obj);
+				}
+			}
+			return null;
+		}
+
 		private void MergeFolder(ProjectItem folderItem, FolderNode parentNode)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -246,7 +323,7 @@ namespace Morris.FeatureExplorer
 					try { childPath = child.get_FileNames(1); }
 					catch { childPath = childName; }
 
-					if (childKind == Constants.vsProjectItemKindPhysicalFolder)
+					if (childKind == DteConstants.vsProjectItemKindPhysicalFolder)
 					{
 						FolderNode existingFolder = parentNode.Children
 							.OfType<FolderNode>()
@@ -261,7 +338,7 @@ namespace Morris.FeatureExplorer
 						existingFolder.SourcePaths.Add(childPath);
 						MergeFolder(child, existingFolder);
 					}
-					else if (childKind == Constants.vsProjectItemKindPhysicalFile)
+					else if (childKind == DteConstants.vsProjectItemKindPhysicalFile)
 					{
 						FileNode existingFile = parentNode.Children
 							.OfType<FileNode>()
@@ -452,7 +529,7 @@ namespace Morris.FeatureExplorer
 				foreach (ProjectItem item in items)
 				{
 					if (StringComparer.OrdinalIgnoreCase.Equals(item.Name, FeaturesFolderName)
-						&& item.Kind == Constants.vsProjectItemKindPhysicalFolder)
+						&& item.Kind == DteConstants.vsProjectItemKindPhysicalFolder)
 					{
 						MergeFolder(item, mergeTarget);
 					}

@@ -27,6 +27,7 @@
         </DataTemplate>
     </UserControl.Resources>
     <TreeView ItemsSource="{Binding RootNodes}"
+              SelectedItemChanged="OnSelectedItemChanged"
               Background="Transparent"
               BorderThickness="0" />
 </UserControl>

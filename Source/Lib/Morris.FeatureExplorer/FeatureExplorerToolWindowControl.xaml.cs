@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.VisualStudio.Shell;
+using Morris.FeatureExplorer.Models;
 
 namespace Morris.FeatureExplorer
 {
@@ -18,6 +20,13 @@ namespace Morris.FeatureExplorer
 			Loaded -= OnLoaded;
 			if (DataContext == null)
 				DataContext = FeatureExplorerPackage.ViewModel;
+		}
+
+		private void OnSelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			if (e.NewValue is FileNode fileNode)
+				FeatureExplorerPackage.ViewModel?.SelectInSolutionExplorer(fileNode);
 		}
 	}
 }
