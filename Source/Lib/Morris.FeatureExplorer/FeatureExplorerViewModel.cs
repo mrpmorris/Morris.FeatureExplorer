@@ -153,12 +153,15 @@ namespace Morris.FeatureExplorer
 			RenameFolderIncremental(oldPath, newPath, oldSegments, newSegments);
 		}
 
-		public void SelectInSolutionExplorer(FileNode node)
+		public bool TryResolveHierarchyItem(FileNode node, out IVsHierarchy hierarchy, out uint itemId)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 
+			hierarchy = null;
+			itemId = 0;
+
 			if (Dte == null || node.SourcePaths.Count == 0)
-				return;
+				return false;
 
 			string path = node.SourcePaths.First();
 
@@ -166,45 +169,33 @@ namespace Morris.FeatureExplorer
 			{
 				ProjectItem projectItem = Dte.Solution.FindProjectItem(path);
 				if (projectItem == null)
-					return;
+					return false;
 
 				var serviceProvider = (Microsoft.VisualStudio.OLE.Interop.IServiceProvider)Dte;
 
 				var solution = (IVsSolution)GetService(serviceProvider, typeof(SVsSolution), typeof(IVsSolution));
 				if (solution == null)
-					return;
+					return false;
 
-				if (!ErrorHandler.Succeeded(solution.GetProjectOfUniqueName(projectItem.ContainingProject.UniqueName, out IVsHierarchy hierarchy))
+				if (!ErrorHandler.Succeeded(solution.GetProjectOfUniqueName(projectItem.ContainingProject.UniqueName, out hierarchy))
 					|| hierarchy == null)
-					return;
+					return false;
 
 				string fullPath = projectItem.get_FileNames(1);
 				if (!(hierarchy is IVsProject vsProject)
-					|| !ErrorHandler.Succeeded(vsProject.IsDocumentInProject(fullPath, out int found, new VSDOCUMENTPRIORITY[1], out uint itemId))
+					|| !ErrorHandler.Succeeded(vsProject.IsDocumentInProject(fullPath, out int found, new VSDOCUMENTPRIORITY[1], out itemId))
 					|| found == 0)
-					return;
-
-				var shell = (IVsUIShell)GetService(serviceProvider, typeof(SVsUIShell), typeof(IVsUIShell));
-				if (shell == null)
-					return;
-
-				Guid solutionExplorerGuid = new Guid(ToolWindowGuids.SolutionExplorer);
-				if (!ErrorHandler.Succeeded(shell.FindToolWindow((uint)__VSFINDTOOLWIN.FTW_fForceCreate, ref solutionExplorerGuid, out IVsWindowFrame seFrame))
-					|| seFrame == null)
-					return;
-
-				if (ErrorHandler.Succeeded(seFrame.GetProperty((int)__VSFPROPID.VSFPROPID_DocView, out object docView))
-					&& docView is IVsUIHierarchyWindow hierarchyWindow)
 				{
-					hierarchyWindow.ExpandItem(hierarchy as IVsUIHierarchy, itemId, EXPANDFLAGS.EXPF_SelectItem);
+					hierarchy = null;
+					return false;
 				}
 
-				// Briefly show SE so it pushes selection to Properties, then reactivate FE
-				seFrame.ShowNoActivate();
+				return true;
 			}
 			catch
 			{
-				// Item may not be accessible
+				hierarchy = null;
+				return false;
 			}
 		}
 

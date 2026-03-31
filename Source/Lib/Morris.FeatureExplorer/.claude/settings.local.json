@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Professional/MSBuild/Current/Bin/MSBuild.exe\" \"/c/Data/Mine/Code/Morris.FeatureExplorer/Source/Lib/Morris.FeatureExplorer/Morris.FeatureExplorer.csproj\" -t:Build -p:Configuration=Debug)"
+    ]
+  }
+}
