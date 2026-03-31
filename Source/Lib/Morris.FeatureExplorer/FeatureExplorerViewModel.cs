@@ -532,16 +532,6 @@ namespace Morris.FeatureExplorer
 			}
 		}
 
-		private static bool SegmentPrefixEquals(string[] a, string[] b, int count)
-		{
-			for (int i = 0; i < count; i++)
-			{
-				if (!StringComparer.OrdinalIgnoreCase.Equals(a[i], b[i]))
-					return false;
-			}
-			return true;
-		}
-
 		private void SyncRootNodes(FolderNode possibleRoot)
 		{
 			if (possibleRoot != VirtualRoot)

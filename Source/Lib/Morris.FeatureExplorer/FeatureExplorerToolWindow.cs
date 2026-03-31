@@ -74,10 +74,12 @@ namespace Morris.FeatureExplorer
 		private void EnsureTrackSelection()
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-			if (TrackSelection == null)
-				TrackSelection = GetService(typeof(STrackSelection)) as ITrackSelection;
-			if (TrackSelectionEx == null)
-				TrackSelectionEx = GetService(typeof(STrackSelection)) as IVsTrackSelectionEx;
+			if (TrackSelection == null || TrackSelectionEx == null)
+			{
+				object service = GetService(typeof(STrackSelection));
+				TrackSelection = service as ITrackSelection;
+				TrackSelectionEx = service as IVsTrackSelectionEx;
+			}
 		}
 
 		private void InitializeSolutionExplorer()
