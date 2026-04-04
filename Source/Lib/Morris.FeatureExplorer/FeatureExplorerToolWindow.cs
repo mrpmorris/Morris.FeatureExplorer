@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Runtime.InteropServices;
+using System.Windows;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -16,7 +17,7 @@ namespace Morris.FeatureExplorer
 
 		public FeatureExplorerToolWindow() : base(null)
 		{
-			Caption = "Feature Explorer 2";
+			Caption = "Feature Explorer 5";
 			Content = new FeatureExplorerToolWindowControl(this);
 		}
 
@@ -62,6 +63,40 @@ namespace Morris.FeatureExplorer
 				SelectedObjects = list
 			};
 			TrackSelection.OnSelectChange(container);
+		}
+
+		public void ShowItemContextMenu(IVsHierarchy hierarchy, uint itemId, Point screenPoint)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
+			if (shell == null)
+				return;
+
+			Guid seGuid = new Guid(ToolWindowGuids.SolutionExplorer);
+			if (!ErrorHandler.Succeeded(shell.FindToolWindow((uint)__VSFINDTOOLWIN.FTW_fForceCreate, ref seGuid, out IVsWindowFrame seFrame))
+				|| seFrame == null)
+				return;
+
+			Microsoft.VisualStudio.OLE.Interop.IOleCommandTarget cmdTarget = null;
+			if (ErrorHandler.Succeeded(seFrame.GetProperty((int)__VSFPROPID.VSFPROPID_DocView, out object docView))
+				&& docView is IVsUIHierarchyWindow hierarchyWindow
+				&& hierarchy is IVsUIHierarchy uiHierarchy)
+			{
+				hierarchyWindow.ExpandItem(uiHierarchy, itemId, EXPANDFLAGS.EXPF_SelectItem);
+				cmdTarget = docView as Microsoft.VisualStudio.OLE.Interop.IOleCommandTarget;
+			}
+
+			var menuGuid = new Guid("D309F791-903F-11D0-9EFC-00A0C911004F");
+			var points = new POINTS[]
+			{
+				new POINTS
+				{
+					x = (short)screenPoint.X,
+					y = (short)screenPoint.Y
+				}
+			};
+			shell.ShowContextMenu(0, ref menuGuid, 0x0431, points, cmdTarget);
 		}
 
 		public override void OnToolWindowCreated()

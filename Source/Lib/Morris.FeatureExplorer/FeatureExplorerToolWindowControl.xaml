@@ -33,6 +33,7 @@
     </UserControl.Resources>
     <TreeView ItemsSource="{Binding RootNodes}"
               SelectedItemChanged="OnSelectedItemChanged"
+              PreviewMouseRightButtonUp="OnTreeViewRightClick"
               Background="Transparent"
               BorderThickness="0" />
 </UserControl>
