@@ -68,18 +68,17 @@ namespace Morris.FeatureExplorer
 
 		private void OnRenameTextBoxKeyDown(object sender, KeyEventArgs e)
 		{
+			ThreadHelper.ThrowIfNotOnUIThread();
 			if (sender is TextBox textBox && textBox.DataContext is FileNode fileNode)
 			{
 				if (e.Key == Key.Enter)
 				{
-					textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
-					fileNode.IsEditing = false;
+					CommitRename(textBox, fileNode);
 					e.Handled = true;
 				}
 				else if (e.Key == Key.Escape)
 				{
-					textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
-					fileNode.IsEditing = false;
+					CancelRename(textBox, fileNode);
 					e.Handled = true;
 				}
 			}
@@ -88,10 +87,52 @@ namespace Morris.FeatureExplorer
 		private void OnRenameTextBoxLostFocus(object sender, RoutedEventArgs e)
 		{
 			if (sender is TextBox textBox && textBox.DataContext is FileNode fileNode && fileNode.IsEditing)
+				CancelRename(textBox, fileNode);
+		}
+
+		private void CancelRename(TextBox textBox, FileNode fileNode)
+		{
+			textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
+			fileNode.IsEditing = false;
+		}
+
+		private void CommitRename(TextBox textBox, FileNode fileNode)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			string newName = textBox.Text;
+			string oldName = fileNode.Name;
+
+			if (newName == oldName || string.IsNullOrWhiteSpace(newName))
 			{
-				textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
-				fileNode.IsEditing = false;
+				CancelRename(textBox, fileNode);
+				return;
 			}
+
+			fileNode.IsEditing = false;
+
+			try
+			{
+				var dte = (EnvDTE80.DTE2)Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(EnvDTE.DTE));
+				string path = fileNode.SourcePaths.GetEnumerator().Current;
+				foreach (string sourcePath in fileNode.SourcePaths)
+				{
+					path = sourcePath;
+					break;
+				}
+
+				EnvDTE.ProjectItem projectItem = dte?.Solution?.FindProjectItem(path);
+				if (projectItem != null)
+				{
+					projectItem.Name = newName;
+					return;
+				}
+			}
+			catch
+			{
+			}
+
+			fileNode.Name = oldName;
 		}
 
 		private void OnSelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
