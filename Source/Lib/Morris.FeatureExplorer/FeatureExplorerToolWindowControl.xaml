@@ -43,7 +43,7 @@
             </DataTemplate.Triggers>
         </DataTemplate>
     </UserControl.Resources>
-    <TreeView ItemsSource="{Binding RootNodes}"
+    <TreeView x:Name="MainTreeView" ItemsSource="{Binding RootNodes}"
               SelectedItemChanged="OnSelectedItemChanged"
               PreviewMouseRightButtonUp="OnTreeViewRightClick"
               Background="Transparent"

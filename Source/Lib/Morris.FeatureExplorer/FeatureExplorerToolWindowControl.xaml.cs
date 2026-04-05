@@ -125,6 +125,7 @@ namespace Morris.FeatureExplorer
 				if (projectItem != null)
 				{
 					projectItem.Name = newName;
+					SelectNodeByName(MainTreeView.ItemContainerGenerator, MainTreeView.Items, newName);
 					return;
 				}
 			}
@@ -133,6 +134,28 @@ namespace Morris.FeatureExplorer
 			}
 
 			fileNode.Name = oldName;
+		}
+
+		private bool SelectNodeByName(ItemContainerGenerator generator, ItemCollection items, string name)
+		{
+			foreach (object item in items)
+			{
+				if (item is FileNode fn && fn.Name == name)
+				{
+					if (generator.ContainerFromItem(item) is TreeViewItem tvi)
+						tvi.IsSelected = true;
+					return true;
+				}
+
+				if (item is FolderNode && generator.ContainerFromItem(item) is TreeViewItem folderTvi)
+				{
+					folderTvi.IsExpanded = true;
+					folderTvi.UpdateLayout();
+					if (SelectNodeByName(folderTvi.ItemContainerGenerator, folderTvi.Items, name))
+						return true;
+				}
+			}
+			return false;
 		}
 
 		private void OnSelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
