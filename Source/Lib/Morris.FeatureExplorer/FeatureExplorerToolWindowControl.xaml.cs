@@ -55,8 +55,14 @@ namespace Morris.FeatureExplorer
 		{
 			if (sender is TextBox textBox && textBox.Visibility == Visibility.Visible)
 			{
-				textBox.Focus();
-				textBox.SelectAll();
+#pragma warning disable VSTHRD001, VSTHRD110
+				textBox.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new System.Action(() =>
+				{
+					textBox.Focus();
+					int dotIndex = textBox.Text.IndexOf('.');
+					textBox.Select(0, dotIndex >= 0 ? dotIndex : textBox.Text.Length);
+				}));
+#pragma warning restore VSTHRD001, VSTHRD110
 			}
 		}
 
