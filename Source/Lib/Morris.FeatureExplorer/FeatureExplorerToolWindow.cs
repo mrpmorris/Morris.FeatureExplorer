@@ -11,7 +11,9 @@ namespace Morris.FeatureExplorer
 	[Guid("B7E3A1F0-5C2D-4E8A-9F1B-3D6C7E8F9A0B")]
 	public sealed class FeatureExplorerToolWindow : ToolWindowPane
 	{
+		private EnvDTE.CommandEvents CommandEvents;
 		private bool Initialized;
+		private Models.FileNode PendingRenameNode;
 		private ITrackSelection TrackSelection;
 		private IVsTrackSelectionEx TrackSelectionEx;
 
@@ -65,7 +67,7 @@ namespace Morris.FeatureExplorer
 			TrackSelection.OnSelectChange(container);
 		}
 
-		public void ShowItemContextMenu(IVsHierarchy hierarchy, uint itemId, Point screenPoint)
+		public void ShowItemContextMenu(Models.FileNode fileNode, IVsHierarchy hierarchy, uint itemId, Point screenPoint)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -87,6 +89,8 @@ namespace Morris.FeatureExplorer
 				cmdTarget = docView as Microsoft.VisualStudio.OLE.Interop.IOleCommandTarget;
 			}
 
+			PendingRenameNode = fileNode;
+
 			var menuGuid = new Guid("D309F791-903F-11D0-9EFC-00A0C911004F");
 			var points = new POINTS[]
 			{
@@ -104,6 +108,24 @@ namespace Morris.FeatureExplorer
 			ThreadHelper.ThrowIfNotOnUIThread();
 			base.OnToolWindowCreated();
 			EnsureTrackSelection();
+
+			var dte = GetService(typeof(EnvDTE.DTE)) as EnvDTE80.DTE2;
+			if (dte != null)
+			{
+				CommandEvents = dte.Events.CommandEvents["{5EFC7975-14BC-11CF-9B2B-00AA00573819}", 150];
+				CommandEvents.BeforeExecute += OnBeforeRenameExecute;
+			}
+		}
+
+		private void OnBeforeRenameExecute(string guid, int id, object customIn, object customOut, ref bool cancelDefault)
+		{
+			if (PendingRenameNode != null)
+			{
+				var node = PendingRenameNode;
+				PendingRenameNode = null;
+				cancelDefault = true;
+				node.IsEditing = true;
+			}
 		}
 
 		private void EnsureTrackSelection()

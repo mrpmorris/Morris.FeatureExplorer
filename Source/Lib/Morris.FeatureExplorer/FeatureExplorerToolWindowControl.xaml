@@ -27,8 +27,20 @@
         <DataTemplate DataType="{x:Type models:FileNode}">
             <StackPanel Orientation="Horizontal">
                 <imaging:CrispImage Width="16" Height="16" Moniker="{Binding Name, Converter={StaticResource FileIconConverter}}" Margin="0,0,4,0" />
-                <TextBlock Text="{Binding Name}" />
+                <TextBlock x:Name="DisplayText" Text="{Binding Name}" Visibility="Visible" />
+                <TextBox x:Name="EditText" Text="{Binding Name, UpdateSourceTrigger=Explicit}"
+                         Visibility="Collapsed"
+                         MinWidth="100"
+                         LostFocus="OnRenameTextBoxLostFocus"
+                         KeyDown="OnRenameTextBoxKeyDown"
+                         IsVisibleChanged="OnRenameTextBoxIsVisibleChanged" />
             </StackPanel>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                    <Setter TargetName="DisplayText" Property="Visibility" Value="Collapsed" />
+                    <Setter TargetName="EditText" Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
         </DataTemplate>
     </UserControl.Resources>
     <TreeView ItemsSource="{Binding RootNodes}"

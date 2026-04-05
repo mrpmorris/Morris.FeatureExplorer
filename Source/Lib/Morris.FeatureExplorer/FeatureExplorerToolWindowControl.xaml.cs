@@ -47,8 +47,45 @@ namespace Morris.FeatureExplorer
 
 			var treeView = (TreeView)sender;
 			Point screenPoint = treeView.PointToScreen(e.GetPosition(treeView));
-			ToolWindow.ShowItemContextMenu(hierarchy, itemId, screenPoint);
+			ToolWindow.ShowItemContextMenu(fileNode, hierarchy, itemId, screenPoint);
 			e.Handled = true;
+		}
+
+		private void OnRenameTextBoxIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+		{
+			if (sender is TextBox textBox && textBox.Visibility == Visibility.Visible)
+			{
+				textBox.Focus();
+				textBox.SelectAll();
+			}
+		}
+
+		private void OnRenameTextBoxKeyDown(object sender, KeyEventArgs e)
+		{
+			if (sender is TextBox textBox && textBox.DataContext is FileNode fileNode)
+			{
+				if (e.Key == Key.Enter)
+				{
+					textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+					fileNode.IsEditing = false;
+					e.Handled = true;
+				}
+				else if (e.Key == Key.Escape)
+				{
+					textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
+					fileNode.IsEditing = false;
+					e.Handled = true;
+				}
+			}
+		}
+
+		private void OnRenameTextBoxLostFocus(object sender, RoutedEventArgs e)
+		{
+			if (sender is TextBox textBox && textBox.DataContext is FileNode fileNode && fileNode.IsEditing)
+			{
+				textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
+				fileNode.IsEditing = false;
+			}
 		}
 
 		private void OnSelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
