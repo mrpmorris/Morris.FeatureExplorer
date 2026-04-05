@@ -45,6 +45,7 @@
     </UserControl.Resources>
     <TreeView x:Name="MainTreeView" ItemsSource="{Binding RootNodes}"
               SelectedItemChanged="OnSelectedItemChanged"
+              MouseDoubleClick="OnTreeViewDoubleClick"
               PreviewMouseRightButtonUp="OnTreeViewRightClick"
               Background="Transparent"
               BorderThickness="0" />

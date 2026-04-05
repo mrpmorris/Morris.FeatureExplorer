@@ -28,6 +28,32 @@ namespace Morris.FeatureExplorer
 				DataContext = FeatureExplorerPackage.ViewModel;
 		}
 
+		private void OnTreeViewDoubleClick(object sender, MouseButtonEventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			DependencyObject source = e.OriginalSource as DependencyObject;
+			while (source != null && !(source is TreeViewItem))
+				source = VisualTreeHelper.GetParent(source);
+
+			if (!(source is TreeViewItem treeViewItem) || !(treeViewItem.DataContext is FileNode fileNode))
+				return;
+
+			if (fileNode.SourcePaths.Count == 0)
+				return;
+
+			string path = null;
+			foreach (string sourcePath in fileNode.SourcePaths)
+			{
+				path = sourcePath;
+				break;
+			}
+
+			var dte = (EnvDTE80.DTE2)Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(EnvDTE.DTE));
+			dte?.ItemOperations?.OpenFile(path);
+			e.Handled = true;
+		}
+
 		private void OnTreeViewRightClick(object sender, MouseButtonEventArgs e)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();

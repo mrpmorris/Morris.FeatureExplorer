@@ -19,7 +19,7 @@ namespace Morris.FeatureExplorer
 
 		public FeatureExplorerToolWindow() : base(null)
 		{
-			Caption = "Feature Explorer 11";
+			Caption = "Feature Explorer 12";
 			Content = new FeatureExplorerToolWindowControl(this);
 		}
 
