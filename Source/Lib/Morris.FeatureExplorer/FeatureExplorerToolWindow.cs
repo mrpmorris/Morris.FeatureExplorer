@@ -19,7 +19,7 @@ namespace Morris.FeatureExplorer
 
 		public FeatureExplorerToolWindow() : base(null)
 		{
-			Caption = "Feature Explorer 12";
+			Caption = "Feature Explorer 1";
 			Content = new FeatureExplorerToolWindowControl(this);
 		}
 
@@ -91,7 +91,7 @@ namespace Morris.FeatureExplorer
 
 			PendingRenameNode = fileNode;
 
-			var menuGuid = new Guid("D309F791-903F-11D0-9EFC-00A0C911004F");
+			Guid menuGuid = VsMenus.guidSHLMainMenu;
 			var points = new POINTS[]
 			{
 				new POINTS
@@ -100,7 +100,7 @@ namespace Morris.FeatureExplorer
 					y = (short)screenPoint.Y
 				}
 			};
-			shell.ShowContextMenu(0, ref menuGuid, 0x0431, points, cmdTarget);
+			shell.ShowContextMenu(0, ref menuGuid, VsMenus.IDM_VS_CTXT_ITEMNODE, points, cmdTarget);
 		}
 
 		public override void OnToolWindowCreated()
@@ -112,7 +112,9 @@ namespace Morris.FeatureExplorer
 			var dte = GetService(typeof(EnvDTE.DTE)) as EnvDTE80.DTE2;
 			if (dte != null)
 			{
-				CommandEvents = dte.Events.CommandEvents["{5EFC7975-14BC-11CF-9B2B-00AA00573819}", 150];
+				CommandEvents = dte.Events.CommandEvents[
+					typeof(VSConstants.VSStd97CmdID).GUID.ToString("B"),
+					(int)VSConstants.VSStd97CmdID.Rename];
 				CommandEvents.BeforeExecute += OnBeforeRenameExecute;
 			}
 		}
