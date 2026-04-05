@@ -49,20 +49,9 @@ namespace Morris.FeatureExplorer
 			}
 			else
 			{
-				FileNode existing = parent.Children
-					.OfType<FileNode>()
-					.FirstOrDefault(f => StringComparer.OrdinalIgnoreCase.Equals(f.Name, leafName));
-
-				if (existing != null)
-				{
-					existing.SourcePaths.Add(fullPath);
-				}
-				else
-				{
-					var node = new FileNode(leafName);
-					node.SourcePaths.Add(fullPath);
-					parent.Children.AddSorted(node);
-				}
+				var node = new FileNode(leafName);
+				node.SourcePaths.Add(fullPath);
+				parent.Children.AddSorted(node);
 			}
 		}
 
@@ -107,11 +96,17 @@ namespace Morris.FeatureExplorer
 				return;
 
 			string leafName = segments[segments.Length - 1];
-			NodeBase target = isFolder
-				? (NodeBase)parent.Children.OfType<FolderNode>()
-					.FirstOrDefault(f => StringComparer.OrdinalIgnoreCase.Equals(f.Name, leafName))
-				: parent.Children.OfType<FileNode>()
+			NodeBase target;
+			if (isFolder)
+			{
+				target = parent.Children.OfType<FolderNode>()
 					.FirstOrDefault(f => StringComparer.OrdinalIgnoreCase.Equals(f.Name, leafName));
+			}
+			else
+			{
+				target = parent.Children.OfType<FileNode>()
+					.FirstOrDefault(f => f.SourcePaths.Contains(fullPath));
+			}
 
 			if (target == null)
 				return;
@@ -331,17 +326,9 @@ namespace Morris.FeatureExplorer
 					}
 					else if (childKind == DteConstants.vsProjectItemKindPhysicalFile)
 					{
-						FileNode existingFile = parentNode.Children
-							.OfType<FileNode>()
-							.FirstOrDefault(f => StringComparer.OrdinalIgnoreCase.Equals(f.Name, childName));
-
-						if (existingFile == null)
-						{
-							existingFile = new FileNode(childName);
-							parentNode.Children.AddSorted(existingFile);
-						}
-
-						existingFile.SourcePaths.Add(childPath);
+						var fileNode = new FileNode(childName);
+						fileNode.SourcePaths.Add(childPath);
+						parentNode.Children.AddSorted(fileNode);
 					}
 				}
 				catch (Exception)
@@ -403,30 +390,20 @@ namespace Morris.FeatureExplorer
 				}
 				else
 				{
-					FileNode targetChild = target.Children
-						.OfType<FileNode>()
-						.FirstOrDefault(f => StringComparer.OrdinalIgnoreCase.Equals(f.Name, child.Name));
-
-					if (targetChild == null)
+					if (child.SourcePaths.Count == 0)
 					{
-						if (child.SourcePaths.Count == 0)
-						{
-							source.Children.RemoveAt(i);
-							foreach (string path in newPaths)
-								child.SourcePaths.Add(path);
-							target.Children.AddSorted(child);
-							continue;
-						}
-
-						targetChild = new FileNode(child.Name);
+						source.Children.RemoveAt(i);
+						foreach (string path in newPaths)
+							child.SourcePaths.Add(path);
+						target.Children.AddSorted(child);
+					}
+					else
+					{
+						var targetChild = new FileNode(child.Name);
+						foreach (string path in newPaths)
+							targetChild.SourcePaths.Add(path);
 						target.Children.AddSorted(targetChild);
 					}
-
-					foreach (string path in newPaths)
-						targetChild.SourcePaths.Add(path);
-
-					if (child.SourcePaths.Count == 0)
-						source.Children.RemoveAt(i);
 				}
 			}
 		}
