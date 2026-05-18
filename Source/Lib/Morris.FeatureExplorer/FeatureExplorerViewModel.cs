@@ -16,6 +16,7 @@ namespace Morris.FeatureExplorer
 	public sealed class FeatureExplorerViewModel
 	{
 		public ObservableCollection<NodeBase> RootNodes { get; } = new ObservableCollection<NodeBase>();
+		public bool SuppressUpdates { get; set; }
 
 		private const string FeaturesFolderName = "Features";
 		private DTE2 Dte;
@@ -118,6 +119,54 @@ namespace Morris.FeatureExplorer
 			PruneEmptyFolders(segments, segments.Length - 2);
 		}
 
+		public void RenameFolderInPlace(FolderNode folder, string newName)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			if (folder == null || string.IsNullOrWhiteSpace(newName))
+				return;
+
+			List<string> snapshot = folder.SourcePaths.ToList();
+			if (snapshot.Count == 0)
+			{
+				folder.Name = newName;
+				return;
+			}
+
+			string[] segments = GetFeatureRelativeSegments(snapshot[0]);
+			if (segments == null || segments.Length == 0)
+				return;
+
+			var mappings = new List<(string OldPath, string NewPath)>(snapshot.Count);
+			foreach (string oldPath in snapshot)
+			{
+				bool trailing = oldPath.Length > 0
+					&& (oldPath[oldPath.Length - 1] == Path.DirectorySeparatorChar
+						|| oldPath[oldPath.Length - 1] == Path.AltDirectorySeparatorChar);
+				string trimmed = oldPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+				string parentDir = Path.GetDirectoryName(trimmed) ?? string.Empty;
+				string newPath = Path.Combine(parentDir, newName);
+				if (trailing)
+					newPath += Path.DirectorySeparatorChar;
+				mappings.Add((oldPath, newPath));
+			}
+
+			folder.SourcePaths.Clear();
+			foreach (var mapping in mappings)
+				folder.SourcePaths.Add(mapping.NewPath);
+
+			foreach (var mapping in mappings)
+				UpdateDescendantSourcePaths(folder, mapping.OldPath, mapping.NewPath);
+
+			folder.Name = newName;
+
+			FolderNode parent = FindFolderPath(segments, 0, segments.Length - 1) ?? VirtualRoot;
+			parent.Children.Reposition(folder);
+
+			if (parent == VirtualRoot)
+				RepositionInRootNodes(folder);
+		}
+
 		public void RenameItem(string oldPath, string newPath, bool isFolder)
 		{
 			string[] oldSegments = GetFeatureRelativeSegments(oldPath);
@@ -201,6 +250,30 @@ namespace Morris.FeatureExplorer
 			RebuildTree();
 		}
 
+		public bool ValidateFolderRename(FolderNode folder, string newName, out List<string> conflictingProjects)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			conflictingProjects = new List<string>();
+
+			if (Dte?.Solution == null || folder == null || folder.SourcePaths.Count == 0 || string.IsNullOrWhiteSpace(newName))
+				return true;
+
+			string sampleSourcePath = folder.SourcePaths.First();
+			string[] segments = GetFeatureRelativeSegments(sampleSourcePath);
+			if (segments == null || segments.Length == 0)
+				return true;
+
+			string[] parentSegments = new string[segments.Length - 1];
+			Array.Copy(segments, 0, parentSegments, 0, parentSegments.Length);
+
+			var conflicts = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+			foreach (Project project in Dte.Solution.Projects)
+				CollectFolderConflicts(project, folder, parentSegments, newName, conflicts);
+
+			conflictingProjects = conflicts.ToList();
+			return conflictingProjects.Count == 0;
+		}
+
 		internal static string[] GetFeatureRelativeSegments(string fullPath)
 		{
 			if (string.IsNullOrEmpty(fullPath))
@@ -225,6 +298,64 @@ namespace Morris.FeatureExplorer
 			}
 
 			return null;
+		}
+
+		private static void CollectFolderConflicts(
+			Project project,
+			FolderNode folder,
+			string[] parentSegments,
+			string newName,
+			SortedSet<string> conflicts)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			if (project == null)
+				return;
+
+			try
+			{
+				if (project.Kind == ProjectKinds.vsProjectKindSolutionFolder)
+				{
+					foreach (ProjectItem item in project.ProjectItems)
+					{
+						if (item.SubProject != null)
+							CollectFolderConflicts(item.SubProject, folder, parentSegments, newName, conflicts);
+					}
+					return;
+				}
+
+				ProjectItems items = project.ProjectItems;
+				if (items == null)
+					return;
+
+				foreach (ProjectItem item in items)
+				{
+					if (!StringComparer.OrdinalIgnoreCase.Equals(item.Name, FeaturesFolderName)
+						|| item.Kind != DteConstants.vsProjectItemKindPhysicalFolder)
+						continue;
+
+					string featuresPath;
+					try { featuresPath = item.get_FileNames(1); }
+					catch { continue; }
+
+					string candidate = featuresPath;
+					foreach (string segment in parentSegments)
+						candidate = Path.Combine(candidate, segment);
+					candidate = Path.Combine(candidate, newName);
+
+					if (!Directory.Exists(candidate))
+						continue;
+
+					if (IsSelf(folder, candidate))
+						continue;
+
+					conflicts.Add(project.Name);
+				}
+			}
+			catch (Exception)
+			{
+				// Project may be unloaded or inaccessible
+			}
 		}
 
 		private FolderNode EnsureFolderPath(string[] segments, int start, int endExclusive, string sourcePath)
@@ -289,6 +420,18 @@ namespace Morris.FeatureExplorer
 				}
 			}
 			return null;
+		}
+
+		private static bool IsSelf(FolderNode folder, string candidate)
+		{
+			string normalizedCandidate = candidate.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+			foreach (string sourcePath in folder.SourcePaths)
+			{
+				string normalizedSource = sourcePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+				if (StringComparer.OrdinalIgnoreCase.Equals(normalizedSource, normalizedCandidate))
+					return true;
+			}
+			return false;
 		}
 
 		private void MergeFolder(ProjectItem folderItem, FolderNode parentNode)
@@ -463,12 +606,40 @@ namespace Morris.FeatureExplorer
 			targetNode.SourcePaths.Add(newPath);
 			MoveMatchingChildren(sourceNode, targetNode, oldPath, newPath);
 
-			sourceNode.SourcePaths.Remove(oldPath);
+			string normalizedOldPath = oldPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+			string sourcePathToRemove = sourceNode.SourcePaths
+				.FirstOrDefault(p => StringComparer.OrdinalIgnoreCase.Equals(
+					p.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+					normalizedOldPath));
+			if (sourcePathToRemove != null)
+				sourceNode.SourcePaths.Remove(sourcePathToRemove);
+
 			if (sourceNode.SourcePaths.Count == 0 && sourceNode.Children.Count == 0)
 			{
 				oldParent.Children.Remove(sourceNode);
 				SyncRootNodes(oldParent);
 			}
+		}
+
+		private void RepositionInRootNodes(FolderNode folder)
+		{
+			int oldIndex = RootNodes.IndexOf(folder);
+			if (oldIndex < 0)
+				return;
+
+			int newIndex = 0;
+			for (int i = 0; i < RootNodes.Count; i++)
+			{
+				if (i == oldIndex)
+					continue;
+				if (NodeBaseComparer.Instance.Compare(RootNodes[i], folder) < 0)
+					newIndex++;
+				else
+					break;
+			}
+
+			if (newIndex != oldIndex)
+				RootNodes.Move(oldIndex, newIndex);
 		}
 
 		private void ScanProject(Project project, FolderNode mergeTarget)

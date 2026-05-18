@@ -20,12 +20,23 @@ namespace Morris.FeatureExplorer
 
 		public void Reposition(T item)
 		{
-			int index = IndexOf(item);
-			if (index >= 0)
+			int oldIndex = IndexOf(item);
+			if (oldIndex < 0)
+				return;
+
+			int newIndex = 0;
+			for (int i = 0; i < Count; i++)
 			{
-				RemoveAt(index);
-				AddSorted(item);
+				if (i == oldIndex)
+					continue;
+				if (Comparer.Compare(Items[i], item) < 0)
+					newIndex++;
+				else
+					break;
 			}
+
+			if (newIndex != oldIndex)
+				Move(oldIndex, newIndex);
 		}
 
 		private int FindInsertionIndex(T item)

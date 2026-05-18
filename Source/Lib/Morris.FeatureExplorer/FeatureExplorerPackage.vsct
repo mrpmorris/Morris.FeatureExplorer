@@ -6,9 +6,20 @@
   <Extern href="vsshlids.h" />
 
   <Commands package="guidFeatureExplorerPackage">
+    <Menus>
+      <Menu guid="guidFeatureExplorerCmdSet" id="FolderContextMenu" priority="0x0000" type="Context">
+        <Strings>
+          <ButtonText>Folder Context</ButtonText>
+        </Strings>
+      </Menu>
+    </Menus>
+
     <Groups>
       <Group guid="guidFeatureExplorerCmdSet" id="FeatureExplorerMenuGroup" priority="0x0350">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_VIEW" />
+      </Group>
+      <Group guid="guidFeatureExplorerCmdSet" id="FolderContextMenuGroup" priority="0x0100">
+        <Parent guid="guidFeatureExplorerCmdSet" id="FolderContextMenu" />
       </Group>
     </Groups>
 
@@ -19,6 +30,12 @@
           <ButtonText>Feature Explorer</ButtonText>
         </Strings>
       </Button>
+      <Button guid="guidFeatureExplorerCmdSet" id="RenameFolderCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidFeatureExplorerCmdSet" id="FolderContextMenuGroup" />
+        <Strings>
+          <ButtonText>Rename</ButtonText>
+        </Strings>
+      </Button>
     </Buttons>
   </Commands>
 
@@ -27,7 +44,10 @@
 
     <GuidSymbol name="guidFeatureExplorerCmdSet" value="{A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D}">
       <IDSymbol name="FeatureExplorerMenuGroup" value="0x1020" />
+      <IDSymbol name="FolderContextMenu" value="0x1030" />
+      <IDSymbol name="FolderContextMenuGroup" value="0x1040" />
       <IDSymbol name="FeatureExplorerCommandId" value="0x0100" />
+      <IDSymbol name="RenameFolderCommandId" value="0x0101" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

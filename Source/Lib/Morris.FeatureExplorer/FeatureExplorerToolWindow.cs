@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.ComponentModel.Design;
 using System.Runtime.InteropServices;
 using System.Windows;
 using Microsoft.VisualStudio;
@@ -13,13 +14,14 @@ namespace Morris.FeatureExplorer
 	{
 		private EnvDTE.CommandEvents CommandEvents;
 		private bool Initialized;
-		private Models.FileNode PendingRenameNode;
+		private Models.FolderNode PendingFolderRenameNode;
+		private Models.NodeBase PendingRenameNode;
 		private ITrackSelection TrackSelection;
 		private IVsTrackSelectionEx TrackSelectionEx;
 
 		public FeatureExplorerToolWindow() : base(null)
 		{
-			Caption = "Feature Explorer 1";
+			Caption = "Feature Explorer 99";
 			Content = new FeatureExplorerToolWindowControl(this);
 		}
 
@@ -65,6 +67,30 @@ namespace Morris.FeatureExplorer
 				SelectedObjects = list
 			};
 			TrackSelection.OnSelectChange(container);
+		}
+
+		public void ShowFolderContextMenu(Models.FolderNode folderNode, Point screenPoint)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
+			if (shell == null)
+				return;
+
+			PendingFolderRenameNode = folderNode;
+
+			var cmdTarget = GetService(typeof(IMenuCommandService)) as Microsoft.VisualStudio.OLE.Interop.IOleCommandTarget;
+
+			Guid menuGuid = Consts.CommandSetGuid;
+			var points = new POINTS[]
+			{
+				new POINTS
+				{
+					x = (short)screenPoint.X,
+					y = (short)screenPoint.Y
+				}
+			};
+			shell.ShowContextMenu(0, ref menuGuid, Consts.FolderContextMenuId, points, cmdTarget);
 		}
 
 		public void ShowItemContextMenu(Models.FileNode fileNode, IVsHierarchy hierarchy, uint itemId, Point screenPoint)
@@ -117,16 +143,14 @@ namespace Morris.FeatureExplorer
 					(int)VSConstants.VSStd97CmdID.Rename];
 				CommandEvents.BeforeExecute += OnBeforeRenameExecute;
 			}
-		}
 
-		private void OnBeforeRenameExecute(string guid, int id, object customIn, object customOut, ref bool cancelDefault)
-		{
-			if (PendingRenameNode != null)
+			var commandService = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
+			if (commandService != null)
 			{
-				var node = PendingRenameNode;
-				PendingRenameNode = null;
-				cancelDefault = true;
-				node.IsEditing = true;
+				var renameFolderId = new CommandID(Consts.CommandSetGuid, Consts.RenameFolderCommandId);
+				var renameFolderCommand = new OleMenuCommand(OnRenameFolderInvoked, renameFolderId);
+				renameFolderCommand.BeforeQueryStatus += OnRenameFolderQueryStatus;
+				commandService.AddCommand(renameFolderCommand);
 			}
 		}
 
@@ -155,6 +179,36 @@ namespace Morris.FeatureExplorer
 			{
 				seFrame.Show();
 				seFrame.Hide();
+			}
+		}
+
+		private void OnBeforeRenameExecute(string guid, int id, object customIn, object customOut, ref bool cancelDefault)
+		{
+			if (PendingRenameNode != null)
+			{
+				var node = PendingRenameNode;
+				PendingRenameNode = null;
+				cancelDefault = true;
+				node.IsEditing = true;
+			}
+		}
+
+		private void OnRenameFolderInvoked(object sender, EventArgs e)
+		{
+			if (PendingFolderRenameNode != null)
+			{
+				var node = PendingFolderRenameNode;
+				PendingFolderRenameNode = null;
+				node.IsEditing = true;
+			}
+		}
+
+		private void OnRenameFolderQueryStatus(object sender, EventArgs e)
+		{
+			if (sender is OleMenuCommand cmd)
+			{
+				cmd.Visible = true;
+				cmd.Enabled = PendingFolderRenameNode != null;
 			}
 		}
 	}

@@ -32,6 +32,8 @@ namespace Morris.FeatureExplorer
 
 		public int OnAfterAddDirectoriesEx(int cProjects, int cDirectories, IVsProject[] rgpProjects, int[] rgFirstIndices, string[] rgpszMkDocuments, VSADDDIRECTORYFLAGS[] rgFlags)
 		{
+			if (ViewModel.SuppressUpdates)
+				return VSConstants.S_OK;
 			for (int i = 0; i < cDirectories; i++)
 				ViewModel.AddItem(rgpszMkDocuments[i], isFolder: true);
 			return VSConstants.S_OK;
@@ -39,6 +41,8 @@ namespace Morris.FeatureExplorer
 
 		public int OnAfterAddFilesEx(int cProjects, int cFiles, IVsProject[] rgpProjects, int[] rgFirstIndices, string[] rgpszMkDocuments, VSADDFILEFLAGS[] rgFlags)
 		{
+			if (ViewModel.SuppressUpdates)
+				return VSConstants.S_OK;
 			for (int i = 0; i < cFiles; i++)
 				ViewModel.AddItem(rgpszMkDocuments[i], isFolder: false);
 			return VSConstants.S_OK;
@@ -46,6 +50,8 @@ namespace Morris.FeatureExplorer
 
 		public int OnAfterRemoveDirectories(int cProjects, int cDirectories, IVsProject[] rgpProjects, int[] rgFirstIndices, string[] rgpszMkDocuments, VSREMOVEDIRECTORYFLAGS[] rgFlags)
 		{
+			if (ViewModel.SuppressUpdates)
+				return VSConstants.S_OK;
 			for (int i = 0; i < cDirectories; i++)
 				ViewModel.RemoveItem(rgpszMkDocuments[i], isFolder: true);
 			return VSConstants.S_OK;
@@ -53,6 +59,8 @@ namespace Morris.FeatureExplorer
 
 		public int OnAfterRemoveFiles(int cProjects, int cFiles, IVsProject[] rgpProjects, int[] rgFirstIndices, string[] rgpszMkDocuments, VSREMOVEFILEFLAGS[] rgFlags)
 		{
+			if (ViewModel.SuppressUpdates)
+				return VSConstants.S_OK;
 			for (int i = 0; i < cFiles; i++)
 				ViewModel.RemoveItem(rgpszMkDocuments[i], isFolder: false);
 			return VSConstants.S_OK;
@@ -60,6 +68,8 @@ namespace Morris.FeatureExplorer
 
 		public int OnAfterRenameDirectories(int cProjects, int cDirectories, IVsProject[] rgpProjects, int[] rgFirstIndices, string[] rgpszOldMkDocuments, string[] rgpszNewMkDocuments, VSRENAMEDIRECTORYFLAGS[] rgFlags)
 		{
+			if (ViewModel.SuppressUpdates)
+				return VSConstants.S_OK;
 			for (int i = 0; i < cDirectories; i++)
 				ViewModel.RenameItem(rgpszOldMkDocuments[i], rgpszNewMkDocuments[i], isFolder: true);
 			return VSConstants.S_OK;
@@ -67,6 +77,8 @@ namespace Morris.FeatureExplorer
 
 		public int OnAfterRenameFiles(int cProjects, int cFiles, IVsProject[] rgpProjects, int[] rgFirstIndices, string[] rgpszOldMkDocuments, string[] rgpszNewMkDocuments, VSRENAMEFILEFLAGS[] rgFlags)
 		{
+			if (ViewModel.SuppressUpdates)
+				return VSConstants.S_OK;
 			for (int i = 0; i < cFiles; i++)
 				ViewModel.RenameItem(rgpszOldMkDocuments[i], rgpszNewMkDocuments[i], isFolder: false);
 			return VSConstants.S_OK;

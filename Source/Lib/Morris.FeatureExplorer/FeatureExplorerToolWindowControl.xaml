@@ -16,11 +16,21 @@
                                   ItemsSource="{Binding Children}">
             <StackPanel Orientation="Horizontal">
                 <imaging:CrispImage x:Name="FolderIcon" Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.FolderClosed}" Margin="0,0,4,0" />
-                <TextBlock Text="{Binding Name}" />
+                <TextBlock x:Name="DisplayText" Text="{Binding Name}" Visibility="Visible" />
+                <TextBox x:Name="EditText" Text="{Binding Name, UpdateSourceTrigger=Explicit}"
+                         Visibility="Collapsed"
+                         MinWidth="100"
+                         LostFocus="OnRenameTextBoxLostFocus"
+                         KeyDown="OnRenameTextBoxKeyDown"
+                         IsVisibleChanged="OnRenameTextBoxIsVisibleChanged" />
             </StackPanel>
             <HierarchicalDataTemplate.Triggers>
                 <DataTrigger Binding="{Binding IsExpanded, RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True">
                     <Setter TargetName="FolderIcon" Property="Moniker" Value="{x:Static catalog:KnownMonikers.FolderOpened}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                    <Setter TargetName="DisplayText" Property="Visibility" Value="Collapsed" />
+                    <Setter TargetName="EditText" Property="Visibility" Value="Visible" />
                 </DataTrigger>
             </HierarchicalDataTemplate.Triggers>
         </HierarchicalDataTemplate>

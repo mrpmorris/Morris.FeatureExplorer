@@ -11,7 +11,7 @@ namespace Morris.FeatureExplorer
 {
 	[PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
 	[Guid(Consts.PackageGuidString)]
-	[ProvideMenuResource("Menus.ctmenu", 1)]
+	[ProvideMenuResource("Menus.ctmenu", 2)]
 	[ProvideToolWindow(typeof(FeatureExplorerToolWindow), Style = VsDockStyle.Tabbed, Window = ToolWindowGuids.SolutionExplorer)]
 	[ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExistsAndFullyLoaded_string, PackageAutoLoadFlags.BackgroundLoad)]
 	public sealed class FeatureExplorerPackage : AsyncPackage
