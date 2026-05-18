@@ -36,6 +36,12 @@
           <ButtonText>Rename</ButtonText>
         </Strings>
       </Button>
+      <Button guid="guidFeatureExplorerCmdSet" id="DeleteFolderCommandId" priority="0x0200" type="Button">
+        <Parent guid="guidFeatureExplorerCmdSet" id="FolderContextMenuGroup" />
+        <Strings>
+          <ButtonText>Delete</ButtonText>
+        </Strings>
+      </Button>
     </Buttons>
   </Commands>
 
@@ -48,6 +54,7 @@
       <IDSymbol name="FolderContextMenuGroup" value="0x1040" />
       <IDSymbol name="FeatureExplorerCommandId" value="0x0100" />
       <IDSymbol name="RenameFolderCommandId" value="0x0101" />
+      <IDSymbol name="DeleteFolderCommandId" value="0x0102" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

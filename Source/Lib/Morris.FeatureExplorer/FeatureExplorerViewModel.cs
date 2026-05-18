@@ -114,7 +114,10 @@ namespace Morris.FeatureExplorer
 
 			target.SourcePaths.Remove(fullPath);
 			if (target.SourcePaths.Count == 0)
+			{
 				parent.Children.Remove(target);
+				SyncRootNodes(parent);
+			}
 
 			PruneEmptyFolders(segments, segments.Length - 2);
 		}

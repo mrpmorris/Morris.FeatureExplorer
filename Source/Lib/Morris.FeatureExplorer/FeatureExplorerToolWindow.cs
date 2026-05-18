@@ -14,14 +14,14 @@ namespace Morris.FeatureExplorer
 	{
 		private EnvDTE.CommandEvents CommandEvents;
 		private bool Initialized;
-		private Models.FolderNode PendingFolderRenameNode;
+		private Models.FolderNode PendingFolderContextNode;
 		private Models.NodeBase PendingRenameNode;
 		private ITrackSelection TrackSelection;
 		private IVsTrackSelectionEx TrackSelectionEx;
 
 		public FeatureExplorerToolWindow() : base(null)
 		{
-			Caption = "Feature Explorer 99";
+			Caption = "Feature Explorer 2";
 			Content = new FeatureExplorerToolWindowControl(this);
 		}
 
@@ -77,7 +77,7 @@ namespace Morris.FeatureExplorer
 			if (shell == null)
 				return;
 
-			PendingFolderRenameNode = folderNode;
+			PendingFolderContextNode = folderNode;
 
 			var cmdTarget = GetService(typeof(IMenuCommandService)) as Microsoft.VisualStudio.OLE.Interop.IOleCommandTarget;
 
@@ -151,6 +151,11 @@ namespace Morris.FeatureExplorer
 				var renameFolderCommand = new OleMenuCommand(OnRenameFolderInvoked, renameFolderId);
 				renameFolderCommand.BeforeQueryStatus += OnRenameFolderQueryStatus;
 				commandService.AddCommand(renameFolderCommand);
+
+				var deleteFolderId = new CommandID(Consts.CommandSetGuid, Consts.DeleteFolderCommandId);
+				var deleteFolderCommand = new OleMenuCommand(OnDeleteFolderInvoked, deleteFolderId);
+				deleteFolderCommand.BeforeQueryStatus += OnDeleteFolderQueryStatus;
+				commandService.AddCommand(deleteFolderCommand);
 			}
 		}
 
@@ -193,12 +198,35 @@ namespace Morris.FeatureExplorer
 			}
 		}
 
+		private void OnDeleteFolderInvoked(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			if (PendingFolderContextNode == null)
+				return;
+
+			var node = PendingFolderContextNode;
+			PendingFolderContextNode = null;
+
+			if (Content is FeatureExplorerToolWindowControl control)
+				control.DeleteFolder(node);
+		}
+
+		private void OnDeleteFolderQueryStatus(object sender, EventArgs e)
+		{
+			if (sender is OleMenuCommand cmd)
+			{
+				cmd.Visible = true;
+				cmd.Enabled = PendingFolderContextNode != null;
+			}
+		}
+
 		private void OnRenameFolderInvoked(object sender, EventArgs e)
 		{
-			if (PendingFolderRenameNode != null)
+			if (PendingFolderContextNode != null)
 			{
-				var node = PendingFolderRenameNode;
-				PendingFolderRenameNode = null;
+				var node = PendingFolderContextNode;
+				PendingFolderContextNode = null;
 				node.IsEditing = true;
 			}
 		}
@@ -208,7 +236,7 @@ namespace Morris.FeatureExplorer
 			if (sender is OleMenuCommand cmd)
 			{
 				cmd.Visible = true;
-				cmd.Enabled = PendingFolderRenameNode != null;
+				cmd.Enabled = PendingFolderContextNode != null;
 			}
 		}
 	}

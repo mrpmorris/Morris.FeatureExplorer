@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Morris.FeatureExplorer.Models;
@@ -21,6 +22,57 @@ namespace Morris.FeatureExplorer
 			DataContext = FeatureExplorerPackage.ViewModel;
 			if (DataContext == null)
 				Loaded += OnLoaded;
+		}
+
+		public void DeleteFolder(FolderNode folderNode)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			if (folderNode == null)
+				return;
+
+			int result = VsShellUtilities.ShowMessageBox(
+				ServiceProvider.GlobalProvider,
+				$"Delete folder '{folderNode.Name}'?",
+				"Confirm delete",
+				OLEMSGICON.OLEMSGICON_QUERY,
+				OLEMSGBUTTON.OLEMSGBUTTON_YESNO,
+				OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_SECOND);
+
+			if (result != (int)VSConstants.MessageBoxResult.IDYES)
+				return;
+
+			FeatureExplorerViewModel viewModel = FeatureExplorerPackage.ViewModel;
+			if (viewModel == null)
+				return;
+
+			viewModel.SuppressUpdates = true;
+			try
+			{
+				var dte = (EnvDTE80.DTE2)Package.GetGlobalService(typeof(EnvDTE.DTE));
+				if (dte?.Solution == null)
+					return;
+
+				List<string> paths = folderNode.SourcePaths.ToList();
+				foreach (string path in paths)
+				{
+					try
+					{
+						EnvDTE.ProjectItem projectItem = dte.Solution.FindProjectItem(path);
+						projectItem?.Delete();
+					}
+					catch
+					{
+					}
+				}
+
+				foreach (string path in paths)
+					viewModel.RemoveItem(path, isFolder: true);
+			}
+			finally
+			{
+				viewModel.SuppressUpdates = false;
+			}
 		}
 
 		private void CancelRename(TextBox textBox, NodeBase node)
