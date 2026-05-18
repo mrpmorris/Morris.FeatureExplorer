@@ -11,6 +11,12 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.3" PrivateAssets="all" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Features\Orders\Create\" />
+    <Folder Include="Features\Orders\Delete\" />
+    <Folder Include="Features\Orders\Update\" />
+  </ItemGroup>
+
   <ProjectExtensions><VisualStudio><UserProperties MorrisFeatureExplorerFeatureFolderId="Features\" MorrisFeatureExplorerLayerName="UI" /></VisualStudio></ProjectExtensions>
 
 </Project>

@@ -46,6 +46,7 @@ namespace Morris.FeatureExplorer
 					var node = new FolderNode(leafName);
 					node.SourcePaths.Add(fullPath);
 					parent.Children.AddSorted(node);
+					SyncRootNodes(parent);
 				}
 			}
 			else
@@ -53,6 +54,7 @@ namespace Morris.FeatureExplorer
 				var node = new FileNode(leafName);
 				node.SourcePaths.Add(fullPath);
 				parent.Children.AddSorted(node);
+				SyncRootNodes(parent);
 			}
 		}
 
@@ -66,6 +68,50 @@ namespace Morris.FeatureExplorer
 		{
 			Dte = null;
 			Clear();
+		}
+
+		public List<string> CreateFolder(List<string> parentPaths, string newName)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			var result = new List<string>();
+			if (Dte?.Solution == null || parentPaths == null || string.IsNullOrWhiteSpace(newName))
+				return result;
+
+			foreach (string parentPath in parentPaths)
+			{
+				try
+				{
+					ProjectItem parentItem = Dte.Solution.FindProjectItem(parentPath);
+					if (parentItem?.ProjectItems == null)
+						continue;
+
+					ProjectItem newItem = parentItem.ProjectItems.AddFolder(newName);
+					if (newItem != null)
+					{
+						try { result.Add(newItem.get_FileNames(1)); }
+						catch { }
+					}
+				}
+				catch
+				{
+				}
+			}
+			return result;
+		}
+
+		public List<string> GetFeaturesFolderPaths()
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			var result = new List<string>();
+			if (Dte?.Solution == null)
+				return result;
+
+			foreach (Project project in Dte.Solution.Projects)
+				CollectFeaturesPaths(project, result);
+
+			return result;
 		}
 
 		public void RebuildTree()
@@ -253,6 +299,39 @@ namespace Morris.FeatureExplorer
 			RebuildTree();
 		}
 
+		public bool ValidateFolderCreate(List<string> parentPaths, string newName, out List<string> conflictingProjects)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			conflictingProjects = new List<string>();
+
+			if (Dte?.Solution == null || parentPaths == null || string.IsNullOrWhiteSpace(newName))
+				return true;
+
+			var conflicts = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+			foreach (string parentPath in parentPaths)
+			{
+				string candidate = Path.Combine(parentPath, newName);
+				if (!Directory.Exists(candidate))
+					continue;
+
+				try
+				{
+					ProjectItem parentItem = Dte.Solution.FindProjectItem(parentPath);
+					if (parentItem?.ContainingProject != null)
+						conflicts.Add(parentItem.ContainingProject.Name);
+					else
+						conflicts.Add(parentPath);
+				}
+				catch
+				{
+					conflicts.Add(parentPath);
+				}
+			}
+
+			conflictingProjects = conflicts.ToList();
+			return conflictingProjects.Count == 0;
+		}
+
 		public bool ValidateFolderRename(FolderNode folder, string newName, out List<string> conflictingProjects)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -301,6 +380,44 @@ namespace Morris.FeatureExplorer
 			}
 
 			return null;
+		}
+
+		private static void CollectFeaturesPaths(Project project, List<string> result)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			if (project == null)
+				return;
+
+			try
+			{
+				if (project.Kind == ProjectKinds.vsProjectKindSolutionFolder)
+				{
+					foreach (ProjectItem item in project.ProjectItems)
+					{
+						if (item.SubProject != null)
+							CollectFeaturesPaths(item.SubProject, result);
+					}
+					return;
+				}
+
+				ProjectItems items = project.ProjectItems;
+				if (items == null)
+					return;
+
+				foreach (ProjectItem item in items)
+				{
+					if (StringComparer.OrdinalIgnoreCase.Equals(item.Name, FeaturesFolderName)
+						&& item.Kind == DteConstants.vsProjectItemKindPhysicalFolder)
+					{
+						try { result.Add(item.get_FileNames(1)); }
+						catch { }
+					}
+				}
+			}
+			catch (Exception)
+			{
+			}
 		}
 
 		private static void CollectFolderConflicts(
@@ -371,21 +488,35 @@ namespace Morris.FeatureExplorer
 					.OfType<FolderNode>()
 					.FirstOrDefault(f => StringComparer.OrdinalIgnoreCase.Equals(f.Name, name));
 
+				string ancestorOwnPath = GetAncestorPath(sourcePath, endExclusive - i);
+
 				if (child == null)
 				{
 					child = new FolderNode(name);
-					child.SourcePaths.Add(sourcePath);
+					child.SourcePaths.Add(ancestorOwnPath);
 					current.Children.AddSorted(child);
 					SyncRootNodes(current);
 				}
 				else
 				{
-					child.SourcePaths.Add(sourcePath);
+					child.SourcePaths.Add(ancestorOwnPath);
 				}
 
 				current = child;
 			}
 			return current;
+		}
+
+		private static string GetAncestorPath(string leafPath, int parentsUp)
+		{
+			if (string.IsNullOrEmpty(leafPath) || parentsUp <= 0)
+				return leafPath;
+
+			string path = leafPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+			for (int i = 0; i < parentsUp; i++)
+				path = Path.GetDirectoryName(path) ?? path;
+
+			return path + Path.DirectorySeparatorChar;
 		}
 
 		private FolderNode FindFolderPath(string[] segments, int start, int endExclusive)

@@ -14,6 +14,7 @@ namespace Morris.FeatureExplorer
 	{
 		private EnvDTE.CommandEvents CommandEvents;
 		private bool Initialized;
+		private bool PendingCreateFeature;
 		private Models.FolderNode PendingFolderContextNode;
 		private Models.NodeBase PendingRenameNode;
 		private ITrackSelection TrackSelection;
@@ -21,7 +22,7 @@ namespace Morris.FeatureExplorer
 
 		public FeatureExplorerToolWindow() : base(null)
 		{
-			Caption = "Feature Explorer 2";
+			Caption = "Feature Explorer 6";
 			Content = new FeatureExplorerToolWindowControl(this);
 		}
 
@@ -129,6 +130,30 @@ namespace Morris.FeatureExplorer
 			shell.ShowContextMenu(0, ref menuGuid, VsMenus.IDM_VS_CTXT_ITEMNODE, points, cmdTarget);
 		}
 
+		public void ShowTreeViewContextMenu(Point screenPoint)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			var shell = GetService(typeof(SVsUIShell)) as IVsUIShell;
+			if (shell == null)
+				return;
+
+			PendingCreateFeature = true;
+
+			var cmdTarget = GetService(typeof(IMenuCommandService)) as Microsoft.VisualStudio.OLE.Interop.IOleCommandTarget;
+
+			Guid menuGuid = Consts.CommandSetGuid;
+			var points = new POINTS[]
+			{
+				new POINTS
+				{
+					x = (short)screenPoint.X,
+					y = (short)screenPoint.Y
+				}
+			};
+			shell.ShowContextMenu(0, ref menuGuid, Consts.TreeViewBackgroundContextMenuId, points, cmdTarget);
+		}
+
 		public override void OnToolWindowCreated()
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
@@ -156,6 +181,16 @@ namespace Morris.FeatureExplorer
 				var deleteFolderCommand = new OleMenuCommand(OnDeleteFolderInvoked, deleteFolderId);
 				deleteFolderCommand.BeforeQueryStatus += OnDeleteFolderQueryStatus;
 				commandService.AddCommand(deleteFolderCommand);
+
+				var createFolderId = new CommandID(Consts.CommandSetGuid, Consts.CreateFolderCommandId);
+				var createFolderCommand = new OleMenuCommand(OnCreateFolderInvoked, createFolderId);
+				createFolderCommand.BeforeQueryStatus += OnCreateFolderQueryStatus;
+				commandService.AddCommand(createFolderCommand);
+
+				var createFeatureId = new CommandID(Consts.CommandSetGuid, Consts.CreateFeatureCommandId);
+				var createFeatureCommand = new OleMenuCommand(OnCreateFeatureInvoked, createFeatureId);
+				createFeatureCommand.BeforeQueryStatus += OnCreateFeatureQueryStatus;
+				commandService.AddCommand(createFeatureCommand);
 			}
 		}
 
@@ -195,6 +230,51 @@ namespace Morris.FeatureExplorer
 				PendingRenameNode = null;
 				cancelDefault = true;
 				node.IsEditing = true;
+			}
+		}
+
+		private void OnCreateFeatureInvoked(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			if (!PendingCreateFeature)
+				return;
+
+			PendingCreateFeature = false;
+
+			if (Content is FeatureExplorerToolWindowControl control)
+				control.BeginCreateFeature();
+		}
+
+		private void OnCreateFeatureQueryStatus(object sender, EventArgs e)
+		{
+			if (sender is OleMenuCommand cmd)
+			{
+				cmd.Visible = true;
+				cmd.Enabled = PendingCreateFeature;
+			}
+		}
+
+		private void OnCreateFolderInvoked(object sender, EventArgs e)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			if (PendingFolderContextNode == null)
+				return;
+
+			var node = PendingFolderContextNode;
+			PendingFolderContextNode = null;
+
+			if (Content is FeatureExplorerToolWindowControl control)
+				control.BeginCreateFolder(node);
+		}
+
+		private void OnCreateFolderQueryStatus(object sender, EventArgs e)
+		{
+			if (sender is OleMenuCommand cmd)
+			{
+				cmd.Visible = true;
+				cmd.Enabled = PendingFolderContextNode != null;
 			}
 		}
 

@@ -20,6 +20,12 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Features\Orders\Create\" />
+    <Folder Include="Features\Orders\Delete\" />
+    <Folder Include="Features\Orders\Update\" />
+  </ItemGroup>
+
   <ProjectExtensions><VisualStudio><UserProperties MorrisFeatureExplorerFeatureFolderId="Features\" MorrisFeatureExplorerLayerName="AppTests" /></VisualStudio></ProjectExtensions>
 
 </Project>

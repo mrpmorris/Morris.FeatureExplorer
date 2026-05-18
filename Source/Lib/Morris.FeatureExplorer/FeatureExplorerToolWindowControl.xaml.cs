@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -22,6 +23,42 @@ namespace Morris.FeatureExplorer
 			DataContext = FeatureExplorerPackage.ViewModel;
 			if (DataContext == null)
 				Loaded += OnLoaded;
+		}
+
+		public void BeginCreateFeature()
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			FeatureExplorerViewModel viewModel = FeatureExplorerPackage.ViewModel;
+			if (viewModel == null)
+				return;
+
+			var placeholder = new FolderNode("NewFolder")
+			{
+				IsNew = true,
+				CreationParent = null
+			};
+
+			viewModel.RootNodes.Add(placeholder);
+			FocusPlaceholder(placeholder);
+		}
+
+		public void BeginCreateFolder(FolderNode parent)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			if (parent == null)
+				return;
+
+			var placeholder = new FolderNode("NewFolder")
+			{
+				IsNew = true,
+				CreationParent = parent
+			};
+
+			parent.Children.AddSorted(placeholder);
+			ExpandToNode(MainTreeView.ItemContainerGenerator, MainTreeView.Items, parent);
+			FocusPlaceholder(placeholder);
 		}
 
 		public void DeleteFolder(FolderNode folderNode)
@@ -77,6 +114,12 @@ namespace Morris.FeatureExplorer
 
 		private void CancelRename(TextBox textBox, NodeBase node)
 		{
+			if (node is FolderNode folderNode && folderNode.IsNew)
+			{
+				RemovePlaceholder(folderNode);
+				return;
+			}
+
 			textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();
 			node.IsEditing = false;
 		}
@@ -119,6 +162,93 @@ namespace Morris.FeatureExplorer
 			}
 
 			fileNode.Name = oldName;
+		}
+
+		private void CommitFolderCreate(TextBox textBox, FolderNode placeholder)
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			string newName = textBox.Text;
+			if (string.IsNullOrWhiteSpace(newName))
+			{
+				CancelRename(textBox, placeholder);
+				return;
+			}
+
+			FeatureExplorerViewModel viewModel = FeatureExplorerPackage.ViewModel;
+			if (viewModel == null)
+			{
+				CancelRename(textBox, placeholder);
+				return;
+			}
+
+			List<string> parentPaths = placeholder.CreationParent != null
+				? placeholder.CreationParent.SourcePaths.ToList()
+				: viewModel.GetFeaturesFolderPaths();
+
+			if (parentPaths.Count == 0)
+			{
+				VsShellUtilities.ShowMessageBox(
+					ServiceProvider.GlobalProvider,
+					"No projects have a Features folder.",
+					"Cannot create folder",
+					OLEMSGICON.OLEMSGICON_WARNING,
+					OLEMSGBUTTON.OLEMSGBUTTON_OK,
+					OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+				CancelRename(textBox, placeholder);
+				return;
+			}
+
+			if (!viewModel.ValidateFolderCreate(parentPaths, newName, out List<string> conflictingProjects))
+			{
+				string projectList = string.Join(", ", conflictingProjects);
+				VsShellUtilities.ShowMessageBox(
+					ServiceProvider.GlobalProvider,
+					$"A folder named '{newName}' already exists in: {projectList}.",
+					"Duplicate folder name",
+					OLEMSGICON.OLEMSGICON_WARNING,
+					OLEMSGBUTTON.OLEMSGBUTTON_OK,
+					OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
+				CancelRename(textBox, placeholder);
+				return;
+			}
+
+			placeholder.IsEditing = false;
+			RemovePlaceholder(placeholder);
+
+			viewModel.SuppressUpdates = true;
+			List<string> newPaths;
+			try
+			{
+				newPaths = viewModel.CreateFolder(parentPaths, newName);
+			}
+			finally
+			{
+				viewModel.SuppressUpdates = false;
+			}
+
+			foreach (string path in newPaths)
+				viewModel.AddItem(path, isFolder: true);
+
+			FolderNode created = (placeholder.CreationParent != null
+				? placeholder.CreationParent.Children.OfType<FolderNode>()
+				: viewModel.RootNodes.OfType<FolderNode>())
+				.FirstOrDefault(f => StringComparer.OrdinalIgnoreCase.Equals(f.Name, newName));
+
+			if (created != null)
+			{
+				if (placeholder.CreationParent != null)
+					ExpandToNode(MainTreeView.ItemContainerGenerator, MainTreeView.Items, placeholder.CreationParent);
+
+				MainTreeView.UpdateLayout();
+
+				TreeViewItem tvi = FindContainer(MainTreeView.ItemContainerGenerator, MainTreeView.Items, created);
+				if (tvi != null)
+				{
+					tvi.IsSelected = true;
+					tvi.BringIntoView();
+				}
+			}
 		}
 
 		private void CommitFolderRename(TextBox textBox, FolderNode folderNode)
@@ -183,6 +313,64 @@ namespace Morris.FeatureExplorer
 			}
 		}
 
+		private static bool ExpandToNode(ItemContainerGenerator generator, ItemCollection items, FolderNode target)
+		{
+			foreach (object item in items)
+			{
+				if (item == target)
+				{
+					if (generator.ContainerFromItem(item) is TreeViewItem tvi)
+					{
+						tvi.IsExpanded = true;
+						tvi.UpdateLayout();
+					}
+					return true;
+				}
+
+				if (item is FolderNode && generator.ContainerFromItem(item) is TreeViewItem folderTvi)
+				{
+					folderTvi.IsExpanded = true;
+					folderTvi.UpdateLayout();
+					if (ExpandToNode(folderTvi.ItemContainerGenerator, folderTvi.Items, target))
+						return true;
+				}
+			}
+			return false;
+		}
+
+		private static TreeViewItem FindContainer(ItemContainerGenerator generator, ItemCollection items, object target)
+		{
+			foreach (object item in items)
+			{
+				var tvi = generator.ContainerFromItem(item) as TreeViewItem;
+				if (item == target)
+					return tvi;
+
+				if (tvi != null && item is FolderNode)
+				{
+					tvi.UpdateLayout();
+					TreeViewItem found = FindContainer(tvi.ItemContainerGenerator, tvi.Items, target);
+					if (found != null)
+						return found;
+				}
+			}
+			return null;
+		}
+
+		private void FocusPlaceholder(FolderNode placeholder)
+		{
+			MainTreeView.UpdateLayout();
+
+			TreeViewItem container = FindContainer(MainTreeView.ItemContainerGenerator, MainTreeView.Items, placeholder);
+			if (container != null)
+			{
+				container.IsSelected = true;
+				container.BringIntoView();
+			}
+
+			placeholder.IsEditing = true;
+		}
+
 		private void OnLoaded(object sender, RoutedEventArgs e)
 		{
 			Loaded -= OnLoaded;
@@ -216,7 +404,12 @@ namespace Morris.FeatureExplorer
 				if (textBox.DataContext is FileNode fileNode)
 					CommitFileRename(textBox, fileNode);
 				else if (textBox.DataContext is FolderNode folderNode)
-					CommitFolderRename(textBox, folderNode);
+				{
+					if (folderNode.IsNew)
+						CommitFolderCreate(textBox, folderNode);
+					else
+						CommitFolderRename(textBox, folderNode);
+				}
 				e.Handled = true;
 			}
 			else if (e.Key == Key.Escape)
@@ -277,15 +470,19 @@ namespace Morris.FeatureExplorer
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 
+			var treeView = (TreeView)sender;
+			Point screenPoint = treeView.PointToScreen(e.GetPosition(treeView));
+
 			DependencyObject source = e.OriginalSource as DependencyObject;
 			while (source != null && !(source is TreeViewItem))
 				source = VisualTreeHelper.GetParent(source);
 
 			if (!(source is TreeViewItem treeViewItem))
+			{
+				ToolWindow.ShowTreeViewContextMenu(screenPoint);
+				e.Handled = true;
 				return;
-
-			var treeView = (TreeView)sender;
-			Point screenPoint = treeView.PointToScreen(e.GetPosition(treeView));
+			}
 
 			if (treeViewItem.DataContext is FileNode fileNode)
 			{
@@ -303,6 +500,14 @@ namespace Morris.FeatureExplorer
 				ToolWindow.ShowFolderContextMenu(folderNode, screenPoint);
 				e.Handled = true;
 			}
+		}
+
+		private static void RemovePlaceholder(FolderNode placeholder)
+		{
+			if (placeholder.CreationParent != null)
+				placeholder.CreationParent.Children.Remove(placeholder);
+			else
+				FeatureExplorerPackage.ViewModel?.RootNodes.Remove(placeholder);
 		}
 
 		private bool SelectNodeByName(ItemContainerGenerator generator, ItemCollection items, string name)

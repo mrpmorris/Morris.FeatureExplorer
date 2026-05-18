@@ -6,6 +6,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Features\Orders\Create\" />
+    <Folder Include="Features\Orders\Delete\" />
+    <Folder Include="Features\Orders\Update\" />
+  </ItemGroup>
+
   <ProjectExtensions><VisualStudio><UserProperties MorrisFeatureExplorerFeatureFolderId="Features\" MorrisFeatureExplorerLayerName="Persistence" /></VisualStudio></ProjectExtensions>
 
 </Project>

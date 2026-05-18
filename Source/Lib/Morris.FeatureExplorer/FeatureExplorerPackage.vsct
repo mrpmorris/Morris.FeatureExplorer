@@ -12,6 +12,11 @@
           <ButtonText>Folder Context</ButtonText>
         </Strings>
       </Menu>
+      <Menu guid="guidFeatureExplorerCmdSet" id="TreeViewBackgroundContextMenu" priority="0x0000" type="Context">
+        <Strings>
+          <ButtonText>Tree Context</ButtonText>
+        </Strings>
+      </Menu>
     </Menus>
 
     <Groups>
@@ -21,6 +26,9 @@
       <Group guid="guidFeatureExplorerCmdSet" id="FolderContextMenuGroup" priority="0x0100">
         <Parent guid="guidFeatureExplorerCmdSet" id="FolderContextMenu" />
       </Group>
+      <Group guid="guidFeatureExplorerCmdSet" id="TreeViewBackgroundContextMenuGroup" priority="0x0100">
+        <Parent guid="guidFeatureExplorerCmdSet" id="TreeViewBackgroundContextMenu" />
+      </Group>
     </Groups>
 
     <Buttons>
@@ -28,6 +36,12 @@
         <Parent guid="guidFeatureExplorerCmdSet" id="FeatureExplorerMenuGroup" />
         <Strings>
           <ButtonText>Feature Explorer</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidFeatureExplorerCmdSet" id="CreateFolderCommandId" priority="0x0050" type="Button">
+        <Parent guid="guidFeatureExplorerCmdSet" id="FolderContextMenuGroup" />
+        <Strings>
+          <ButtonText>Create child Folder</ButtonText>
         </Strings>
       </Button>
       <Button guid="guidFeatureExplorerCmdSet" id="RenameFolderCommandId" priority="0x0100" type="Button">
@@ -40,6 +54,12 @@
         <Parent guid="guidFeatureExplorerCmdSet" id="FolderContextMenuGroup" />
         <Strings>
           <ButtonText>Delete</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidFeatureExplorerCmdSet" id="CreateFeatureCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidFeatureExplorerCmdSet" id="TreeViewBackgroundContextMenuGroup" />
+        <Strings>
+          <ButtonText>Create Feature</ButtonText>
         </Strings>
       </Button>
     </Buttons>
@@ -55,6 +75,10 @@
       <IDSymbol name="FeatureExplorerCommandId" value="0x0100" />
       <IDSymbol name="RenameFolderCommandId" value="0x0101" />
       <IDSymbol name="DeleteFolderCommandId" value="0x0102" />
+      <IDSymbol name="CreateFolderCommandId" value="0x0103" />
+      <IDSymbol name="CreateFeatureCommandId" value="0x0104" />
+      <IDSymbol name="TreeViewBackgroundContextMenu" value="0x1031" />
+      <IDSymbol name="TreeViewBackgroundContextMenuGroup" value="0x1041" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>
